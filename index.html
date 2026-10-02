@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Turn a plain-language brief into real HTML slides. Runs entirely in the browser, with no network calls and no model in the loop.">
+<meta name="theme-color" content="#4b2e83">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icon.svg" type="image/svg+xml">
+<title>HandsOnDeck — plain-language brief to HTML slides</title>
+<style>
+  :root{
+    --ink:#14161a; --muted:#5b6270; --paper:#fff; --surface:#f2f3f6;
+    --rule:#d6dae1; --primary:#4b2e83; --accent:#00a3ad;
+    --warn:#8a5a00; --warn-bg:#fdf6e6;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;
+       color:var(--ink); background:var(--surface); font-size:15px; line-height:1.5}
+  header.app{background:var(--primary); color:#fff; padding:14px 22px;
+             display:flex; align-items:baseline; gap:14px; flex-wrap:wrap}
+  header.app h1{font-size:17px; margin:0; font-weight:600}
+  header.app p{margin:0; font-size:13px; color:#cfc6e4}
+  .wrap{display:flex; gap:18px; padding:18px; align-items:flex-start; flex-wrap:wrap}
+  .panel{background:var(--paper); border:1px solid var(--rule); border-radius:4px}
+  .brief{flex:0 0 400px; max-width:100%; padding:18px}
+  .output{flex:1 1 520px; min-width:340px; padding:0; overflow:hidden}
+  h2{font-size:13px; font-weight:600; margin:0 0 12px; color:var(--muted)}
+  label{display:block; font-size:13px; font-weight:600; margin:14px 0 4px}
+  label:first-of-type{margin-top:0}
+  .hint{font-weight:400; color:var(--muted); font-size:12px; display:block; margin-top:2px}
+  input[type=text], textarea, select{width:100%; padding:8px 9px; border:1px solid var(--rule);
+    border-radius:3px; font:inherit; font-size:14px; color:var(--ink); background:var(--paper)}
+  textarea{min-height:170px; resize:vertical; line-height:1.55}
+  input:focus, textarea:focus, select:focus{outline:2px solid var(--accent); outline-offset:1px;
+    border-color:var(--accent)}
+  .actions{margin-top:18px; display:flex; gap:8px; flex-wrap:wrap}
+  button{font:inherit; font-size:14px; padding:9px 15px; border-radius:3px; cursor:pointer;
+    border:1px solid var(--primary); background:var(--primary); color:#fff}
+  button.secondary{background:var(--paper); color:var(--primary)}
+  button.danger{background:var(--paper); color:#9a2b2b; border-color:#d9b3b3}
+  button:disabled{opacity:.45; cursor:not-allowed}
+  button:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+  .tabs{display:flex; border-bottom:1px solid var(--rule); background:var(--paper)}
+  .tabs button{background:none; border:none; border-bottom:2px solid transparent;
+    color:var(--muted); border-radius:0; padding:12px 16px; font-size:13px; font-weight:600}
+  .tabs button[aria-selected=true]{color:var(--primary); border-bottom-color:var(--primary)}
+  .tabpanel{padding:18px}
+  .tabpanel[hidden]{display:none}
+  .navbar{display:flex; align-items:center; gap:10px; margin-top:10px; flex-wrap:wrap}
+  .navbar .count{font-size:13px; color:var(--muted); font-variant-numeric:tabular-nums}
+  .navbar .spacer{flex:1}
+  .editnote{font-size:12px; color:var(--muted); margin-top:8px}
+  pre.plan{margin:0; padding:14px; background:#1c1f26; color:#e6e9ef; border-radius:3px;
+    font-family:"Cascadia Mono",Consolas,Menlo,monospace; font-size:12.5px; line-height:1.5;
+    max-height:460px; overflow:auto; white-space:pre}
+  .plancap{font-size:12.5px; color:var(--muted); margin:0 0 10px}
+  .warn{background:var(--warn-bg); border-left:3px solid var(--warn); color:var(--warn);
+    padding:9px 11px; border-radius:0 3px 3px 0; font-size:13px; margin-bottom:7px}
+  .warnings{margin-top:7px}
+  .warnings:empty{display:none}
+  .empty{color:var(--muted); font-size:14px; padding:40px 0; text-align:center}
+  .sync{display:none; margin-top:7px; font-size:13px; padding:9px 11px; border-radius:3px;
+    background:#eef7f8; border-left:3px solid var(--accent)}
+  .sync.on{display:block}
+  .version{font-size:12px; color:var(--muted); margin:7px 0 0}
+  .version:empty{display:none}
+  .feedback:not(:empty){margin-bottom:16px}
+  .check{font-size:12.5px; padding:9px 11px; border-radius:0 3px 3px 0}
+  .check:empty{display:none}
+  .check.good{background:#eef7f8; border-left:3px solid var(--accent); color:#12545a}
+  .check.bad{background:#fdecec; border-left:3px solid #9a2b2b; color:#7a2222}
+  .chatlog{border:1px solid var(--rule); border-radius:3px; height:300px; overflow:auto;
+    padding:12px; background:var(--paper); font-size:13.5px; line-height:1.5}
+  .msg{margin-bottom:10px; max-width:82%}
+  .msg .who{font-size:11px; font-weight:600; color:var(--muted); display:block; margin-bottom:2px}
+  .msg.user{margin-left:auto}
+  .msg.user .bubble{background:var(--primary); color:#fff}
+  .msg .bubble{display:inline-block; padding:8px 11px; border-radius:3px; background:var(--surface)}
+  .msg.err .bubble{background:#fdecec; color:#7a2222}
+  .chatbar{display:flex; gap:8px; margin-top:10px}
+  .chatbar input{flex:1}
+  code{font-family:"Cascadia Mono",Consolas,monospace; font-size:12px; background:var(--surface);
+    padding:1px 4px; border-radius:2px}
+
+  /* slide stage: rendered in this document, no iframe */
+  #stage-outer{position:relative; width:100%; aspect-ratio:16/9; overflow:hidden;
+    background:#fff; border:1px solid var(--rule); border-radius:3px}
+  #stage{position:absolute; top:0; left:0; width:1280px; height:720px;
+    transform-origin:top left; background:#fff}
+  #stage .slide{display:none; width:1280px; height:720px; padding:72px 92px;
+    flex-direction:column; justify-content:center; font-family:"Segoe UI",Arial,sans-serif;
+    color:#14161a}
+  #stage .slide.on{display:flex}
+  #stage .slide h3{margin:0 0 var(--sgap); font-weight:600; line-height:1.15;
+    font-size:var(--shead); max-width:22ch}
+  #stage .slide.title{background:var(--saccent); color:#fff}
+  #stage .slide:not(.title) h3{border-left:5px solid var(--saccent); padding-left:16px}
+  #stage .sub{font-size:var(--sbody); opacity:.85; margin:0}
+  #stage .slide.title{position:relative}
+  #stage .vtag{position:absolute; top:64px; right:92px; margin:0; font-size:22px;
+    letter-spacing:.08em; text-transform:uppercase; opacity:.7}
+  #stage ul{margin:0; padding-left:22px}
+  #stage li{font-size:var(--sbody); line-height:var(--slead); margin-bottom:var(--sgap);
+    max-width:52ch}
+  #stage [contenteditable]:focus{outline:2px solid #00a3ad; outline-offset:3px; border-radius:2px}
+  .pill{margin-left:auto; font-size:12px; padding:4px 10px; border-radius:999px;
+    border:1px solid rgba(255,255,255,.35); color:#e8e2f5; white-space:nowrap;
+    display:inline-flex; align-items:center; gap:7px}
+  .pill .dot{width:7px; height:7px; border-radius:50%; background:#4fd18b; flex:none}
+  .pill[data-net="off"] .dot{background:#ffc453}
+  .filebtn{font:inherit; font-size:14px; padding:9px 15px; border-radius:3px; cursor:pointer;
+    border:1px solid var(--primary); background:var(--paper); color:var(--primary);
+    display:inline-block; margin:0}
+  .filebtn:hover{background:var(--surface)}
+  #notice{margin-bottom:7px}
+  #notice[hidden]{display:none}
+  @media (max-width:900px){ .brief{flex:1 1 100%} .pill{margin-left:0} }
+</style>
+</head>
+<body>
+
+<header class="app">
+  <h1>HandsOnDeck</h1>
+  <p>Describe the briefing you need. Get real HTML slides you can refine and send.</p>
+  <span class="pill" id="netpill" data-net="on" title="All generation runs in this browser. Nothing is sent anywhere.">
+    <span class="dot"></span><span id="nettext">Ready &mdash; runs offline</span>
+  </span>
+</header>
+
+<div class="wrap">
+
+  <section class="panel brief">
+    <h2>The brief</h2>
+
+    <div class="feedback">
+      <div class="warn" id="notice" hidden></div>
+      <div class="check" id="content-check"></div>
+      <div class="warnings" id="warnings"></div>
+      <div class="sync" id="sync-note">
+        Slide edits have been written back into the brief below. Regenerating will keep them.
+      </div>
+      <p class="version" id="version-note"></p>
+    </div>
+
+    <label for="f-title">Deck title</label>
+    <input type="text" id="f-title" value="Operational Readiness Review — Q3">
+
+    <label for="f-purpose">Purpose
+      <span class="hint">What should happen after this deck?</span></label>
+    <input type="text" id="f-purpose" value="Get approval to extend the pilot to two more divisions">
+
+    <label for="f-audience">Audience</label>
+    <input type="text" id="f-audience" value="Divisional directors, mixed technical and operational">
+
+    <label for="f-messages">Key messages
+      <span class="hint">One per line. Start a line with a dash to make it a supporting point
+      under the message above.</span></label>
+    <textarea id="f-messages">The pilot cut average case triage time from 40 minutes to 12
+- Measured across 1,430 cases over 11 weeks
+- Largest gains on multi-source cases
+Officers adopted it without formal training
+- 87% weekly active use by week 4
+Two constraints must be resolved before we scale
+- Data retention rules differ across divisions
+- Model latency degrades past 50 concurrent users
+Extending to Divisions C and D needs a decision this month</textarea>
+
+    <label for="f-style">Preferred style</label>
+    <select id="f-style">
+      <option value="operational">Operational brief — dense, evidence-forward</option>
+      <option value="executive">Executive — spare, one idea per slide</option>
+      <option value="workshop">Workshop — conversational</option>
+    </select>
+
+    <div class="actions">
+      <button id="btn-generate">Generate deck</button>
+      <button id="btn-download" class="secondary" disabled>Download HTML</button>
+      <button id="btn-share" class="secondary" disabled>Send for editing</button>
+      <label class="filebtn" for="f-open">Open a deck</label>
+      <input type="file" id="f-open" accept=".html,.json" hidden>
+    </div>
+
+    <p class="editnote">Send for editing saves a copy that carries its own editor and
+      its slide plan. Whoever you send it to edits it with nothing installed, saves, and
+      sends it back; Open a deck brings their version in here with the structure intact.</p>
+
+  </section>
+
+  <section class="panel output">
+    <div class="tabs" role="tablist">
+      <button id="tab-deck" role="tab" aria-selected="true" aria-controls="panel-deck">Deck</button>
+      <button id="tab-plan" role="tab" aria-selected="false" aria-controls="panel-plan">Slide plan</button>
+      <button id="tab-chat" role="tab" aria-selected="false" aria-controls="panel-chat">Refine by chat</button>
+    </div>
+
+    <div class="tabpanel" id="panel-deck" role="tabpanel" aria-labelledby="tab-deck">
+      <div id="deck-empty" class="empty">No deck yet. Fill in the brief and choose Generate deck.</div>
+      <div id="deck-live" hidden>
+        <div id="stage-outer"><div id="stage"></div></div>
+        <div class="navbar">
+          <button class="secondary" id="btn-prev">Previous</button>
+          <button class="secondary" id="btn-next">Next</button>
+          <span class="count" id="count"></span>
+          <span class="count" id="timing"></span>
+          <span class="spacer"></span>
+          <button class="secondary" id="btn-undo" disabled>Undo</button>
+          <button class="danger" id="btn-delete">Delete slide</button>
+        </div>
+        <p class="editnote">Click a headline or a bullet in the slide to edit it. The change is
+          written to the slide plan and back into the brief, so nothing lives only in the rendered
+          HTML. Delete removes the current slide; Undo steps back through any change.</p>
+      </div>
+    </div>
+
+    <div class="tabpanel" id="panel-plan" role="tabpanel" aria-labelledby="tab-plan" hidden>
+      <p class="plancap">This structured plan sits between the requirement and the rendered slides.
+        It is the single source of truth the renderer reads from, and it is what an agent or an
+        external tool would read and write, not the HTML.</p>
+      <pre class="plan" id="planout">No plan yet.</pre>
+    </div>
+
+    <div class="tabpanel" id="panel-chat" role="tabpanel" aria-labelledby="tab-chat" hidden>
+      <p class="plancap">The conversational surface writes to the same slide plan the interface
+        edits. Chat and interface are two views of one object, so a change made here survives
+        being edited on the slide afterwards, and the brief stays in step with both.
+        Deterministic command parsing — no model in the loop, which is what keeps this offline.</p>
+      <div class="chatlog" id="chatlog"></div>
+      <div class="chatbar">
+        <input type="text" id="chat-input" placeholder="e.g. cut to 5 slides">
+        <button id="chat-send">Send</button>
+      </div>
+      <p class="editnote" id="chat-help">Try: <code>cut to 5 slides</code> ·
+        <code>delete slide 4</code> · <code>make slide 3 say Latency is the binding constraint</code> ·
+        <code>add to slide 2: measured over 11 weeks</code> · <code>style executive</code> ·
+        <code>make the ask explicit</code> · <code>undo</code></p>
+    </div>
+  </section>
+
+</div>
+
+<script>
+(function(){
+"use strict";
+
+var plan = null, current = 0, version = 0, editHistory = [], slideEdited = false;
+
+var STYLES = {
+  operational:{ accent:"#4b2e83", head:"44px", body:"25px", lead:1.45, gap:"16px" },
+  executive:  { accent:"#1d3f5e", head:"60px", body:"32px", lead:1.6,  gap:"26px" },
+  workshop:   { accent:"#00707a", head:"50px", body:"28px", lead:1.7,  gap:"21px" }
+};
+
+var TEMPLATE_LABELS = ["Why we are here", "The ask", "Untitled briefing"];
+
+function esc(s){
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+function buildPlan(){
+  var title = document.getElementById("f-title").value.trim();
+  var purpose = document.getElementById("f-purpose").value.trim();
+  var audience = document.getElementById("f-audience").value.trim();
+  var raw = document.getElementById("f-messages").value;
+  var style = document.getElementById("f-style").value;
+
+  var lines = raw.split("\n"), messages = [];
+  for (var i = 0; i < lines.length; i++){
+    var line = lines[i];
+    if (!line.trim()) continue;
+    var isSupport = /^\s+/.test(line) || /^\s*[-*\u2022]/.test(line);
+    var text = line.replace(/^\s*[-*\u2022]\s*/, "").trim();
+    if (!text) continue;
+    if (isSupport && messages.length) messages[messages.length - 1].support.push(text);
+    else messages.push({ headline: text, support: [] });
+  }
+
+  var slides = [{ type:"title", title: title || "Untitled briefing", subtitle: audience }];
+  if (purpose) slides.push({ type:"context", title:"Why we are here", support:[purpose] });
+  for (var m = 0; m < messages.length; m++){
+    slides.push({ type:"point", title: messages[m].headline, support: messages[m].support });
+  }
+  slides.push({ type:"close", title:"The ask", support:[purpose || "Decision requested."] });
+
+  var warnings = [];
+  if (!messages.length) warnings.push("No key messages found. Add at least one line to Key messages.");
+  for (var w = 0; w < messages.length; w++){
+    if (messages[w].headline.length > 120){
+      warnings.push("Headline is too long for one slide: \u201C" +
+        messages[w].headline.slice(0,60) + "\u2026\u201D");
+    }
+    if (!messages[w].support.length){
+      warnings.push("No supporting points under: \u201C" +
+        messages[w].headline.slice(0,60) + "\u201D");
+    }
+  }
+  if (messages.length > 9){
+    warnings.push("This produces " + messages.length +
+      " content slides. Consider consolidating to nine or fewer.");
+  }
+
+  var sourceText = [title, purpose, audience, raw].join("\n").toLowerCase();
+  var traced = 0, untraced = [], templated = 0;
+  function check(str){
+    if (!str) return;
+    if (TEMPLATE_LABELS.indexOf(str) !== -1){ templated += 1; return; }
+    if (sourceText.indexOf(String(str).toLowerCase()) !== -1) traced += 1;
+    else untraced.push(str);
+  }
+  for (var c = 0; c < slides.length; c++){
+    check(slides[c].title);
+    check(slides[c].subtitle);
+    if (slides[c].support){
+      for (var k = 0; k < slides[c].support.length; k++) check(slides[c].support[k]);
+    }
+  }
+
+  return {
+    meta:{ title:title, purpose:purpose, audience:audience, style:style,
+           version:version, generated:new Date().toISOString(),
+           contentCheck:{ tracedToBrief:traced, templateLabels:templated, notTraced:untraced } },
+    slides: slides,
+    warnings: warnings
+  };
+}
+
+function slideMarkup(p, editable){
+  var out = [];
+  for (var i = 0; i < p.slides.length; i++){
+    var s = p.slides[i];
+    var ed = editable ? ' contenteditable="true" spellcheck="false"' : "";
+    var body = "";
+    if (s.type === "title"){
+      body = s.subtitle
+        ? '<p class="sub" data-slide="' + i + '" data-field="subtitle"' + ed + '>' +
+          esc(s.subtitle) + '</p>' : "";
+    } else if (s.support && s.support.length){
+      var items = [];
+      for (var j = 0; j < s.support.length; j++){
+        items.push('<li data-slide="' + i + '" data-field="support" data-index="' + j + '"' +
+          ed + '>' + esc(s.support[j]) + '</li>');
+      }
+      body = "<ul>" + items.join("") + "</ul>";
+    }
+    var tag = (s.type === "title" && p.meta.version)
+      ? '<p class="vtag">Version ' + p.meta.version + '</p>' : "";
+    out.push('<section class="slide ' + s.type + '" data-i="' + i + '">' + tag +
+      '<h3 data-slide="' + i + '" data-field="title"' + ed + '>' + esc(s.title) + '</h3>' +
+      body + '</section>');
+  }
+  return out.join("");
+}
+
+function applyStageStyle(style){
+  var st = STYLES[style] || STYLES.operational;
+  var stage = document.getElementById("stage");
+  stage.style.setProperty("--saccent", st.accent);
+  stage.style.setProperty("--shead", st.head);
+  stage.style.setProperty("--sbody", st.body);
+  stage.style.setProperty("--slead", st.lead);
+  stage.style.setProperty("--sgap", st.gap);
+}
+
+function fitStage(){
+  var outer = document.getElementById("stage-outer");
+  var stage = document.getElementById("stage");
+  if (!outer || !stage) return;
+  stage.style.transform = "scale(" + (outer.clientWidth / 1280) + ")";
+}
+
+function showSlide(n){
+  var slides = document.querySelectorAll("#stage .slide");
+  if (!slides.length) return;
+  if (n < 0 || n >= slides.length) return;
+  for (var i = 0; i < slides.length; i++) slides[i].classList.remove("on");
+  current = n;
+  slides[current].classList.add("on");
+  document.getElementById("count").textContent =
+    "Slide " + (current + 1) + " of " + slides.length;
+}
+
+function renderDeck(startAt){
+  applyStageStyle(plan.meta.style);
+  document.getElementById("stage").innerHTML = slideMarkup(plan, true);
+  fitStage();
+  showSlide(Math.max(0, Math.min(startAt || 0, plan.slides.length - 1)));
+}
+
+function standaloneDoc(p){
+  var st = STYLES[p.meta.style] || STYLES.operational;
+  var css = [
+    "*{box-sizing:border-box}",
+    "html,body{margin:0;padding:0;height:100%}",
+    "body{font-family:'Segoe UI',-apple-system,Roboto,Helvetica,Arial,sans-serif;color:#14161a;background:#fff}",
+    ".slide{display:none;height:100vh;padding:6% 7%;flex-direction:column;justify-content:center}",
+    ".slide.on{display:flex}",
+    ".slide h3{font-size:" + st.head + ";line-height:1.15;margin:0 0 " + st.gap +
+      ";font-weight:600;max-width:22ch}",
+    ".slide.title{background:" + st.accent + ";color:#fff}",
+    ".slide:not(.title) h3{border-left:5px solid " + st.accent + ";padding-left:16px}",
+    ".sub{font-size:" + st.body + ";opacity:.85;margin:0}",
+    ".slide.title{position:relative}",
+    ".vtag{position:absolute;top:6%;right:7%;margin:0;font-size:" +
+      (parseInt(st.body,10) * 0.7) + "px;letter-spacing:.08em;text-transform:uppercase;opacity:.7}",
+    "ul{margin:0;padding-left:22px}",
+    "li{font-size:" + st.body + ";line-height:" + st.lead + ";margin-bottom:" + st.gap +
+      ";max-width:52ch}",
+    ".nav{position:fixed;bottom:18px;right:22px;font-size:14px;color:#666}",
+    "@page{size:A4 landscape;margin:0}",
+    "@media print{.nav{display:none}",
+    ".slide{display:flex!important;height:100vh;page-break-after:always;break-after:page}",
+    ".slide:last-child{page-break-after:auto;break-after:auto}}"
+  ].join("\n");
+
+  var js = [
+    "var slides=document.querySelectorAll('.slide');var i=0;",
+    "var nv=document.getElementById('nav');",
+    "function show(n){if(n<0||n>=slides.length)return;",
+    "slides[i].classList.remove('on');i=n;slides[i].classList.add('on');",
+    "nv.textContent=(i+1)+' / '+slides.length;}",
+    "document.addEventListener('keydown',function(e){",
+    "if(e.key==='ArrowRight'||e.key===' '){e.preventDefault();show(i+1);}",
+    "if(e.key==='ArrowLeft'){e.preventDefault();show(i-1);}});",
+    "slides[0].classList.add('on');nv.textContent='1 / '+slides.length;"
+  ].join("");
+
+  return "<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'>" +
+    "<meta name='viewport' content='width=device-width,initial-scale=1'>" +
+    "<title>" + esc(p.meta.title || "Briefing") +
+    (p.meta.version ? " v" + p.meta.version : "") + "</title><style>" + css +
+    "</style></head><body>" + slideMarkup(p, false) +
+    "<div class='nav' id='nav'></div><scr" + "ipt>" + js + "</scr" + "ipt></body></html>";
+}
+
+function syncFormFromPlan(){
+  if (!plan) return;
+  var messages = [];
+  for (var i = 0; i < plan.slides.length; i++){
+    var s = plan.slides[i];
+    if (s.type === "title"){
+      document.getElementById("f-title").value = s.title;
+      if (typeof s.subtitle === "string") document.getElementById("f-audience").value = s.subtitle;
+    } else if (s.type === "context"){
+      if (s.support && s.support.length) document.getElementById("f-purpose").value = s.support[0];
+    } else if (s.type === "point"){
+      messages.push(s.title);
+      for (var j = 0; j < s.support.length; j++) messages.push("- " + s.support[j]);
+    }
+  }
+  document.getElementById("f-messages").value = messages.join("\n");
+  plan.meta.title = document.getElementById("f-title").value;
+  plan.meta.purpose = document.getElementById("f-purpose").value;
+  plan.meta.audience = document.getElementById("f-audience").value;
+}
+
+function recheckContent(){
+  if (!plan) return;
+  var sourceText = [plan.meta.title, plan.meta.purpose, plan.meta.audience,
+    document.getElementById("f-messages").value].join("\n").toLowerCase();
+  var traced = 0, untraced = [], templated = 0;
+  for (var i = 0; i < plan.slides.length; i++){
+    var s = plan.slides[i], vals = [s.title, s.subtitle].concat(s.support || []);
+    for (var v = 0; v < vals.length; v++){
+      var str = vals[v];
+      if (!str) continue;
+      if (TEMPLATE_LABELS.indexOf(str) !== -1){ templated += 1; continue; }
+      if (sourceText.indexOf(String(str).toLowerCase()) !== -1) traced += 1;
+      else untraced.push(str);
+    }
+  }
+  plan.meta.contentCheck = { tracedToBrief:traced, templateLabels:templated, notTraced:untraced };
+}
+
+function refreshPlanView(){
+  document.getElementById("planout").textContent = JSON.stringify(plan, null, 2);
+}
+
+function refreshWarnings(){
+  var box = document.getElementById("warnings");
+  box.innerHTML = "";
+  if (!plan) return;
+  for (var i = 0; i < plan.warnings.length; i++){
+    var d = document.createElement("div");
+    d.className = "warn";
+    d.textContent = plan.warnings[i];
+    box.appendChild(d);
+  }
+}
+
+function refreshContentCheck(){
+  var box = document.getElementById("content-check");
+  if (!plan || !plan.meta.contentCheck){ box.textContent = ""; return; }
+  var cc = plan.meta.contentCheck;
+  box.className = "check " + (cc.notTraced.length ? "bad" : "good");
+  box.textContent = cc.notTraced.length
+    ? "Content check: " + cc.notTraced.length + " item(s) do not trace back to your brief."
+    : "Content check: all " + cc.tracedToBrief +
+      " content items trace back to your brief. Nothing was invented. (" +
+      cc.templateLabels + " template labels.)";
+}
+
+/* ---------- conversational refinement ----------
+   Commands are parsed deterministically and applied to the slide plan, exactly as the
+   interface edits do. No model runs here: this demonstrates the surface and the shared
+   source of truth, not natural-language understanding. */
+
+function say(who, text, isErr){
+  const log = document.getElementById("chatlog");
+  const d = document.createElement("div");
+  d.className = "msg " + (who === "You" ? "user" : "") + (isErr ? " err" : "");
+  const w = document.createElement("span"); w.className = "who"; w.textContent = who;
+  const b = document.createElement("span"); b.className = "bubble"; b.textContent = text;
+  d.appendChild(w); d.appendChild(b);
+  log.appendChild(d);
+  log.scrollTop = log.scrollHeight;
+}
+
+function contentSlides(){
+  const out = [];
+  for (let i = 0; i < plan.slides.length; i++){
+    if (plan.slides[i].type === "point") out.push(i);
+  }
+  return out;
+}
+
+function afterChatChange(msg, at){
+  syncFormFromPlan();
+  recheckContent();
+  refreshPlanView();
+  refreshContentCheck();
+  markEdited();
+  renderDeck(typeof at === "number" ? at : current);
+  say("HandsOnDeck", msg);
+}
+
+function handleChat(raw){
+  const text = raw.trim();
+  if (!text) return;
+  say("You", text);
+  if (!plan){ say("HandsOnDeck", "Generate a deck first.", true); return; }
+  const t = text.toLowerCase();
+  let m;
+
+  if (/^(undo|revert)\b/.test(t)){
+    if (!editHistory.length){ say("HandsOnDeck", "Nothing to undo.", true); return; }
+    undo();
+    say("HandsOnDeck", "Undone. The deck, the plan and the brief are back to their previous state.");
+    return;
+  }
+
+  if ((m = t.match(/^(?:change )?style (?:to )?(operational|executive|workshop)/))){
+    snapshot();
+    plan.meta.style = m[1];
+    document.getElementById("f-style").value = m[1];
+    afterChatChange("Style changed to " + m[1] + ". Type scale, spacing and density change with it, not just colour.");
+    return;
+  }
+
+  if ((m = t.match(/^(?:cut|reduce|trim)(?: it)?(?: down)? to (\d+) slides?/))){
+    const want = parseInt(m[1], 10);
+    const pts = contentSlides();
+    const fixed = plan.slides.length - pts.length;      // title, context, close
+    const keep = Math.max(1, want - fixed);
+    if (keep >= pts.length){
+      say("HandsOnDeck", "Already " + plan.slides.length + " slides — nothing to cut.", true);
+      return;
+    }
+    snapshot();
+    const drop = pts.slice(keep);
+    for (let i = drop.length - 1; i >= 0; i--) plan.slides.splice(drop[i], 1);
+    afterChatChange("Cut to " + plan.slides.length + " slides by removing the last " + drop.length +
+      " key message(s). They are gone from the brief too — undo if that is the wrong end to cut from.", 0);
+    return;
+  }
+
+  if ((m = t.match(/^(?:delete|remove|drop) slide (\d+)/))){
+    const n = parseInt(m[1], 10) - 1;
+    if (!plan.slides[n]){ say("HandsOnDeck", "There is no slide " + (n+1) + ".", true); return; }
+    if (plan.slides[n].type === "title"){ say("HandsOnDeck", "The title slide cannot be deleted.", true); return; }
+    snapshot();
+    plan.slides.splice(n, 1);
+    afterChatChange("Deleted slide " + (n+1) + ".", Math.min(n, plan.slides.length - 1));
+    return;
+  }
+
+  if ((m = text.match(/^(?:make|retitle|change) slide (\d+) (?:say|to say|to read|about) (.+)$/i))){
+    const n = parseInt(m[1], 10) - 1;
+    if (!plan.slides[n]){ say("HandsOnDeck", "There is no slide " + (n+1) + ".", true); return; }
+    snapshot();
+    plan.slides[n].title = m[2].trim();
+    afterChatChange("Slide " + (n+1) + " headline updated. The wording came from you, so the content check still holds.", n);
+    return;
+  }
+
+  if ((m = text.match(/^add (?:to )?slide (\d+)\s*:\s*(.+)$/i))){
+    const n = parseInt(m[1], 10) - 1;
+    if (!plan.slides[n] || plan.slides[n].type === "title"){
+      say("HandsOnDeck", "Cannot add a supporting point to slide " + (n+1) + ".", true); return;
+    }
+    snapshot();
+    plan.slides[n].support = plan.slides[n].support || [];
+    plan.slides[n].support.push(m[2].trim());
+    afterChatChange("Added a supporting point to slide " + (n+1) + ".", n);
+    return;
+  }
+
+  if (/^make the ask explicit/.test(t)){
+    const last = plan.slides[plan.slides.length - 1];
+    if (last.type !== "close"){ say("HandsOnDeck", "No closing slide to work with.", true); return; }
+    const purpose = document.getElementById("f-purpose").value.trim();
+    if (!purpose){ say("HandsOnDeck", "Add a purpose to the brief and I will put it on the closing slide.", true); return; }
+    snapshot();
+    last.support = [purpose];
+    afterChatChange("The closing slide now states the ask, taken from your purpose. I will not write an ask you have not written yourself.",
+      plan.slides.length - 1);
+    return;
+  }
+
+  if (/^(help|what can you do)/.test(t)){
+    say("HandsOnDeck", "I can cut the deck to a length, delete a slide, change a headline, add a supporting point, change style, make the ask explicit, or undo. Everything I do writes to the slide plan and back into your brief.");
+    return;
+  }
+
+  say("HandsOnDeck", "I did not recognise that. This surface parses a fixed command set rather than free language — in the agentic version a model would sit here and translate intent into the same plan operations.", true);
+}
+
+function snapshot(){
+  if (!plan) return;
+  editHistory.push(JSON.stringify(plan));
+  if (editHistory.length > 40) editHistory.shift();
+  document.getElementById("btn-undo").disabled = false;
+}
+
+function undo(){
+  if (!editHistory.length) return;
+  plan = JSON.parse(editHistory.pop());
+  syncFormFromPlan();
+  recheckContent();
+  refreshPlanView();
+  refreshWarnings();
+  refreshContentCheck();
+  renderDeck(current);
+  if (!editHistory.length) document.getElementById("btn-undo").disabled = true;
+}
+
+function markEdited(){
+  slideEdited = true;
+  document.getElementById("sync-note").classList.add("on");
+  document.getElementById("btn-download").textContent = "Download revised deck";
+}
+
+function clearEdited(){
+  slideEdited = false;
+  document.getElementById("sync-note").classList.remove("on");
+  document.getElementById("btn-download").textContent = "Download HTML";
+}
+
+function generate(){
+  snapshot();
+  version += 1;
+  var t0 = (window.performance && performance.now) ? performance.now() : Date.now();
+  plan = buildPlan();
+  var t1 = (window.performance && performance.now) ? performance.now() : Date.now();
+  clearEdited();
+  document.getElementById("deck-empty").hidden = true;
+  document.getElementById("deck-live").hidden = false;
+  document.getElementById("btn-download").disabled = false;
+  document.getElementById("btn-share").disabled = false;
+  renderDeck(0);
+  refreshPlanView();
+  refreshWarnings();
+  refreshContentCheck();
+  document.getElementById("timing").textContent =
+    "v" + version + " \u00B7 " + plan.slides.length + " slides in " +
+    Math.max(1, Math.round(t1 - t0)) + " ms";
+}
+
+function deleteSlide(){
+  if (!plan) return;
+  var s = plan.slides[current];
+  if (!s) return;
+  if (s.type === "title"){
+    notify("The title slide cannot be deleted. Edit its text instead.");
+    return;
+  }
+  if (plan.slides.length <= 2){
+    notify("A deck needs at least a title slide and one content slide.");
+    return;
+  }
+  snapshot();
+  plan.slides.splice(current, 1);
+  if (current >= plan.slides.length) current = plan.slides.length - 1;
+  syncFormFromPlan();
+  recheckContent();
+  refreshPlanView();
+  refreshContentCheck();
+  markEdited();
+  renderDeck(current);
+}
+
+function download(){
+  if (!plan) return;
+  if (slideEdited){          /* edits since the last version make this a new artefact */
+    version += 1;
+    plan.meta.version = version;
+    clearEdited();
+    renderDeck(current);
+    refreshPlanView();
+  }
+  var blob = new Blob([standaloneDoc(plan)], {type:"text/html"});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url;
+  a.download = (plan.meta.title || "briefing").replace(/[^\w\- ]+/g,"").trim()
+    .replace(/\s+/g,"-").toLowerCase() + "-v" + version + ".html";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1500);
+  document.getElementById("version-note").textContent =
+    "Saved version " + version + " to file.";
+}
+
+document.addEventListener("focusout", function(e){
+  var t = e.target;
+  if (!plan || !t || !t.getAttribute || !t.hasAttribute("data-field")) return;
+  var slide = plan.slides[+t.getAttribute("data-slide")];
+  if (!slide) return;
+  var field = t.getAttribute("data-field");
+  var idx = t.getAttribute("data-index");
+  var value = t.textContent.trim();
+  var before = (field === "support") ? slide.support[+idx] : slide[field];
+  if (before === value) return;
+  snapshot();
+  if (field === "support") slide.support[+idx] = value;
+  else slide[field] = value;
+  syncFormFromPlan();
+  recheckContent();
+  refreshPlanView();
+  refreshContentCheck();
+  markEdited();
+}, true);
+
+document.addEventListener("keydown", function(e){
+  var t = e.target;
+  if (t && (t.isContentEditable || t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return;
+  if (e.key === "ArrowRight"){ e.preventDefault(); showSlide(current + 1); }
+  if (e.key === "ArrowLeft"){ e.preventDefault(); showSlide(current - 1); }
+});
+
+window.addEventListener("resize", fitStage);
+
+document.getElementById("btn-generate").addEventListener("click", generate);
+document.getElementById("btn-download").addEventListener("click", download);
+document.getElementById("btn-share").addEventListener("click", sendForEditing);
+document.getElementById("f-open").addEventListener("change", function(e){
+  openDeckFile(e.target.files && e.target.files[0]);
+  e.target.value = "";
+});
+document.getElementById("btn-next").addEventListener("click", function(){ showSlide(current + 1); });
+document.getElementById("btn-prev").addEventListener("click", function(){ showSlide(current - 1); });
+document.getElementById("btn-undo").addEventListener("click", undo);
+document.getElementById("btn-delete").addEventListener("click", deleteSlide);
+
+function selectTab(which){
+  ["deck","plan","chat"].forEach(function(k){
+    document.getElementById("tab-" + k).setAttribute("aria-selected", k === which);
+    document.getElementById("panel-" + k).hidden = k !== which;
+  });
+  if (which === "deck") fitStage();
+  if (which === "chat") document.getElementById("chat-input").focus();
+}
+["deck","plan","chat"].forEach(function(k){
+  document.getElementById("tab-" + k).addEventListener("click", function(){ selectTab(k); });
+});
+
+function sendChat(){
+  var inp = document.getElementById("chat-input");
+  var v = inp.value;
+  inp.value = "";
+  handleChat(v);
+}
+document.getElementById("chat-send").addEventListener("click", sendChat);
+document.getElementById("chat-input").addEventListener("keydown", function(e){
+  if (e.key === "Enter"){ e.preventDefault(); sendChat(); }
+});
+
+
+/* ---------- handing a deck to someone else ----------
+   The exported file carries its own editor and its own slide plan, so the person
+   receiving it needs nothing installed and no account, and their edits come back
+   as structure rather than as a reworded HTML file. Still no server: the deck
+   travels as a file, the way documents already move between officers. */
+
+function editableDoc(p){
+  var st = STYLES[p.meta.style] || STYLES.operational;
+  var css = [
+    "*{box-sizing:border-box}",
+    "html,body{margin:0;padding:0}",
+    "body{font-family:'Segoe UI',-apple-system,Roboto,Helvetica,Arial,sans-serif;color:#14161a;background:#f2f3f6}",
+    "header{background:" + st.accent + ";color:#fff;padding:12px 20px;display:flex;gap:14px;align-items:baseline;flex-wrap:wrap}",
+    "header h1{font-size:16px;margin:0;font-weight:600}",
+    "header p{margin:0;font-size:13px;opacity:.85}",
+    "main{max-width:1180px;margin:0 auto;padding:18px}",
+    "#outer{position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;background:#fff;border:1px solid #d6dae1;border-radius:4px}",
+    "#stage{position:absolute;top:0;left:0;width:1280px;height:720px;transform-origin:top left;background:#fff}",
+    ".slide{display:none;width:1280px;height:720px;padding:72px 92px;flex-direction:column;justify-content:center}",
+    ".slide.on{display:flex}",
+    ".slide h3{font-size:" + st.head + ";line-height:1.15;margin:0 0 " + st.gap + ";font-weight:600;max-width:22ch}",
+    ".slide.title{background:" + st.accent + ";color:#fff;position:relative}",
+    ".slide:not(.title) h3{border-left:5px solid " + st.accent + ";padding-left:16px}",
+    ".sub{font-size:" + st.body + ";opacity:.85;margin:0}",
+    ".vtag{position:absolute;top:64px;right:92px;margin:0;font-size:22px;letter-spacing:.08em;text-transform:uppercase;opacity:.7}",
+    "ul{margin:0;padding-left:22px}",
+    "li{font-size:" + st.body + ";line-height:" + st.lead + ";margin-bottom:" + st.gap + ";max-width:52ch}",
+    "[contenteditable]:focus{outline:2px solid #00a3ad;outline-offset:3px;border-radius:2px}",
+    ".bar{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}",
+    "button{font:inherit;font-size:14px;padding:9px 15px;border-radius:3px;cursor:pointer;border:1px solid " + st.accent + ";background:#fff;color:" + st.accent + "}",
+    "button.primary{background:" + st.accent + ";color:#fff}",
+    ".count{font-size:13px;color:#5b6270}",
+    ".spacer{flex:1}",
+    ".note{font-size:13px;color:#5b6270;margin-top:12px;max-width:70ch;line-height:1.5}",
+    "@media print{header,.bar,.note{display:none}#outer{border:0;aspect-ratio:auto}",
+    "#stage{position:static;transform:none!important;width:auto;height:auto}",
+    ".slide{display:flex!important;width:100%;height:100vh;page-break-after:always}",
+    ".slide:last-child{page-break-after:auto}}"
+  ].join("\n");
+
+  var js = [
+    "var plan=JSON.parse(document.getElementById('plan').textContent);",
+    "var i=0;",
+    "function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}",
+    "function draw(){var o=[];for(var n=0;n<plan.slides.length;n++){var s=plan.slides[n];var b='';",
+    "if(s.type==='title'){b=s.subtitle?'<p class=\"sub\" data-slide=\"'+n+'\" data-field=\"subtitle\" contenteditable=\"true\">'+esc(s.subtitle)+'</p>':'';}",
+    "else if(s.support&&s.support.length){var it=[];for(var j=0;j<s.support.length;j++){",
+    "it.push('<li data-slide=\"'+n+'\" data-field=\"support\" data-index=\"'+j+'\" contenteditable=\"true\">'+esc(s.support[j])+'</li>');}",
+    "b='<ul>'+it.join('')+'</ul>';}",
+    "var tag=(s.type==='title'&&plan.meta.version)?'<p class=\"vtag\">Version '+plan.meta.version+'</p>':'';",
+    "o.push('<section class=\"slide '+s.type+'\">'+tag+'<h3 data-slide=\"'+n+'\" data-field=\"title\" contenteditable=\"true\">'+esc(s.title)+'</h3>'+b+'</section>');}",
+    "document.getElementById('stage').innerHTML=o.join('');fit();show(Math.min(i,plan.slides.length-1));}",
+    "function fit(){var o=document.getElementById('outer');",
+    "document.getElementById('stage').style.transform='scale('+(o.clientWidth/1280)+')';}",
+    "function show(n){var sl=document.querySelectorAll('.slide');if(n<0||n>=sl.length)return;",
+    "for(var k=0;k<sl.length;k++)sl[k].classList.remove('on');i=n;sl[i].classList.add('on');",
+    "document.getElementById('count').textContent='Slide '+(i+1)+' of '+sl.length;}",
+    "document.addEventListener('focusout',function(e){var t=e.target;",
+    "if(!t||!t.getAttribute||!t.hasAttribute('data-field'))return;",
+    "var s=plan.slides[+t.getAttribute('data-slide')];if(!s)return;",
+    "var f=t.getAttribute('data-field'),x=t.getAttribute('data-index'),v=t.textContent.trim();",
+    "if(f==='support')s.support[+x]=v;else s[f]=v;",
+    "document.getElementById('state').textContent='Edited — not yet saved.';},true);",
+    "document.addEventListener('keydown',function(e){var t=e.target;",
+    "if(t&&(t.isContentEditable||t.tagName==='INPUT'||t.tagName==='TEXTAREA'))return;",
+    "if(e.key==='ArrowRight'){e.preventDefault();show(i+1);}",
+    "if(e.key==='ArrowLeft'){e.preventDefault();show(i-1);}});",
+    "window.addEventListener('resize',fit);",
+    "document.getElementById('next').onclick=function(){show(i+1);};",
+    "document.getElementById('prev').onclick=function(){show(i-1);};",
+    "document.getElementById('save').onclick=function(){",
+    "plan.meta.version=(plan.meta.version||0)+1;plan.meta.editedAt=new Date().toISOString();",
+    "document.getElementById('plan').textContent=JSON.stringify(plan);",
+    "draw();",
+    "var html='<!DOCTYPE html>'+document.documentElement.outerHTML;",
+    "var b=new Blob([html],{type:'text/html'});var u=URL.createObjectURL(b);",
+    "var a=document.createElement('a');a.href=u;",
+    "a.download=(plan.meta.title||'briefing').replace(/[^\\w\\- ]+/g,'').trim().replace(/\\s+/g,'-').toLowerCase()+'-v'+plan.meta.version+'-editable.html';",
+    "document.body.appendChild(a);a.click();document.body.removeChild(a);",
+    "setTimeout(function(){URL.revokeObjectURL(u);},1500);",
+    "document.getElementById('state').textContent='Saved as version '+plan.meta.version+'. Send that file back.';};",
+    "draw();"
+  ].join("");
+
+  return "<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'>" +
+    "<meta name='viewport' content='width=device-width,initial-scale=1'>" +
+    "<title>" + esc(p.meta.title || "Briefing") +
+    (p.meta.version ? " v" + p.meta.version : "") + " — editable</title><style>" + css +
+    "</style></head><body>" +
+    "<header><h1>" + esc(p.meta.title || "Briefing") + "</h1>" +
+    "<p>Editable copy — click any headline or bullet to change it</p></header>" +
+    "<main><div id='outer'><div id='stage'></div></div>" +
+    "<div class='bar'><button id='prev'>Previous</button><button id='next'>Next</button>" +
+    "<span class='count' id='count'></span><span class='spacer'></span>" +
+    "<span class='count' id='state'></span>" +
+    "<button class='primary' id='save'>Save a copy</button></div>" +
+    "<p class='note'>Edits are written into the slide plan carried inside this file, not just " +
+    "into the page. Save a copy downloads a new version you can send back, and the structure " +
+    "survives the round trip. Nothing here needs a connection or an account.</p></main>" +
+    "<scr" + "ipt type='application/json' id='plan'>" +
+    JSON.stringify(p).replace(/</g, "\\u003c") + "</scr" + "ipt>" +
+    "<scr" + "ipt>" + js + "</scr" + "ipt></body></html>";
+}
+
+function saveAs(text, filename){
+  var blob = new Blob([text], {type:"text/html"});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1500);
+}
+
+function baseName(){
+  return (plan.meta.title || "briefing").replace(/[^\w\- ]+/g,"").trim()
+    .replace(/\s+/g,"-").toLowerCase();
+}
+
+function sendForEditing(){
+  if (!plan) return;
+  if (slideEdited){
+    version += 1;
+    plan.meta.version = version;
+    clearEdited();
+    renderDeck(current);
+    refreshPlanView();
+  }
+  plan.meta.version = version;
+  saveAs(editableDoc(plan), baseName() + "-v" + version + "-editable.html");
+  document.getElementById("version-note").textContent =
+    "Editable copy of version " + version + " saved. Send that file to whoever needs to " +
+    "change it — they can edit it with nothing installed and send it back.";
+}
+
+function loadPlanObject(incoming, label){
+  if (!incoming || !incoming.slides || !incoming.slides.length){
+    notify("That file does not contain a slide plan.");
+    return;
+  }
+  snapshot();
+  plan = incoming;
+  plan.meta = plan.meta || {};
+  plan.warnings = plan.warnings || [];
+  version = plan.meta.version || version;
+  document.getElementById("f-style").value = plan.meta.style || "operational";
+  syncFormFromPlan();
+  recheckContent();
+  document.getElementById("deck-empty").hidden = true;
+  document.getElementById("deck-live").hidden = false;
+  document.getElementById("btn-download").disabled = false;
+  document.getElementById("btn-share").disabled = false;
+  renderDeck(0);
+  refreshPlanView();
+  refreshWarnings();
+  refreshContentCheck();
+  clearEdited();
+  document.getElementById("timing").textContent =
+    "v" + version + " · " + plan.slides.length + " slides, opened from a file";
+  document.getElementById("version-note").textContent =
+    "Opened " + label + ". The brief has been filled in from their version, so you can " +
+    "keep working on it here.";
+}
+
+function openDeckFile(file){
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onerror = function(){ notify("That file could not be read."); };
+  reader.onload = function(){
+    var text = String(reader.result || "");
+    var incoming = null;
+    try {
+      if (/^\s*[\{\[]/.test(text)){
+        incoming = JSON.parse(text);
+      } else {
+        /* DOMParser does not run scripts, so an incoming file cannot execute here. */
+        var doc = new DOMParser().parseFromString(text, "text/html");
+        var node = doc.getElementById("plan");
+        if (node) incoming = JSON.parse(node.textContent);
+      }
+    } catch (err){
+      notify("That file could not be read as a deck.");
+      return;
+    }
+    if (!incoming){
+      notify("No slide plan found in that file. Open a deck saved by HandsOnDeck.");
+      return;
+    }
+    loadPlanObject(incoming, file.name);
+  };
+  reader.readAsText(file);
+}
+
+/* ---------- inline notices (no blocking dialogs) ---------- */
+var noticeTimer = null;
+function notify(message){
+  var box = document.getElementById("notice");
+  if (!box) return;
+  box.textContent = message;
+  box.hidden = false;
+  if (noticeTimer) window.clearTimeout(noticeTimer);
+  noticeTimer = window.setTimeout(function(){ box.hidden = true; }, 6000);
+}
+
+/* ---------- offline status ----------
+   The app never calls the network, so losing connectivity changes nothing about what
+   it can do. The pill says so explicitly rather than leaving the user to wonder. */
+function paintNet(){
+  var pill = document.getElementById("netpill");
+  var text = document.getElementById("nettext");
+  if (!pill || !text) return;
+  var online = (typeof navigator.onLine === "boolean") ? navigator.onLine : true;
+  pill.setAttribute("data-net", online ? "on" : "off");
+  text.textContent = online ? "Ready \u2014 runs offline" : "Offline \u2014 still fully working";
+}
+window.addEventListener("online", paintNet);
+window.addEventListener("offline", paintNet);
+paintNet();
+
+/* ---------- service worker ----------
+   Caches the app itself so a second visit needs no network at all. Skipped on file://,
+   where there is no network to begin with and no service worker is permitted. */
+if ("serviceWorker" in navigator &&
+    (location.protocol === "https:" || location.hostname === "localhost")){
+  window.addEventListener("load", function(){
+    navigator.serviceWorker.register("./sw.js").catch(function(){
+      /* No service worker means no install-and-forget offline use.
+         The page itself still works: nothing here needs the network. */
+    });
+  });
+}
+
+generate();
+})();
+</script>
+</body>
+</html>

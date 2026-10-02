@@ -1,0 +1,19 @@
+{
+  "name": "HandsOnDeck",
+  "short_name": "HandsOnDeck",
+  "description": "Turn a plain-language brief into real HTML slides. Runs entirely in the browser, with no network calls and no model in the loop.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f2f3f6",
+  "theme_color": "#4b2e83",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
+    }
+  ]
+}
