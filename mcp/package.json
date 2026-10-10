@@ -1,0 +1,18 @@
+{
+  "name": "handsondeck-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for HandsOnDeck — create, render, revise and review slide plans over stdio.",
+  "private": true,
+  "type": "commonjs",
+  "main": "handsondeck-mcp-server.js",
+  "bin": {
+    "handsondeck-mcp": "handsondeck-mcp-server.js"
+  },
+  "scripts": {
+    "start": "node handsondeck-mcp-server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "UNLICENSED"
+}
