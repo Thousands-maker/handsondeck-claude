@@ -226,6 +226,8 @@
   .check.ai{background:#fbf3e2; color:#6d4a00}
   .check.ai::before{background:#d39b1b}
   .stepnav{display:flex; align-items:center; gap:10px; margin-top:26px; flex-wrap:wrap}
+  .gnav{justify-content:flex-end}
+  .gnav:has(#g-next[hidden]){display:none}
   #screen-guide .step{scroll-margin-top:84px}
   #screen-guide .stepnav{margin:16px 0 22px}
   .chips button.picked{border-color:var(--primary); color:#fff; background:var(--primary)}
@@ -568,10 +570,10 @@
     <p class="outline-note" id="g-outline"></p>
   </section>
 
-  <div class="stepnav">
-    <button type="button" class="secondary" id="g-back">Back</button>
+  <div class="stepnav gnav">
+    <button type="button" class="secondary" id="g-back" hidden>Back</button>
     <span class="spacer"></span>
-    <button type="button" class="big" id="g-next">Next</button>
+    <button type="button" class="big" id="g-next">Continue</button>
   </div>
   <div class="guide-foot">
     <button type="button" class="linkbtn" id="g-example">Fill with example answers</button>
@@ -2101,10 +2103,8 @@ function goStep(n){
   document.getElementById("g-fill").style.width = (furthest / STEPS * 100) + "%";
   document.getElementById("g-label").textContent = step === furthest
     ? "Step " + step + " of " + STEPS : "Editing step " + step + " of " + STEPS;
-  document.getElementById("g-back").textContent = step === 1 ? "Back to start" : "Back";
-  document.getElementById("g-next").textContent = step === STEPS ? "Build my deck"
-    : (step < furthest ? "Done \u2014 back to step " + furthest : "Next");
   if (step === STEPS) renderReview();
+  paintNext();
   var sec = document.querySelector('#screen-guide .step[data-step="' + step + '"]');
   /* Keep Back/Next right under the step being worked on. */
   var nav = document.querySelector("#screen-guide .stepnav");
@@ -2118,6 +2118,40 @@ function goStep(n){
   else if (sec.scrollIntoView) sec.scrollIntoView({ block: "start", behavior: calm ? "auto" : "smooth" });
   sec.classList.remove("arrive"); void sec.offsetWidth; sec.classList.add("arrive");
 }
+
+/* The one button under each question only appears when pressing it is the useful thing
+   to do, and says what it will do. Picking an option already moves on by itself, and any
+   answered question can be reopened by tapping it, so there is no Back button. */
+function paintNext(){
+  var btn = document.getElementById("g-next");
+  var editing = step < furthest;
+  var show = true, label = "Continue", quiet = false;
+  if (step === 1 || step === 2){
+    var filled = !!document.getElementById(step === 1 ? "g-audience" : "g-purpose").value.trim();
+    if (filled) label = editing ? "Done" : "Continue";
+    else { label = editing ? "Done" : "Skip this question"; quiet = true; }
+  } else if (step === 3){
+    var sorted = beats.some(function(b){ return b.headline.trim(); });
+    var freeOpen = !document.getElementById("g-free").hidden;
+    if (freeOpen) show = false;                         /* "Sort it into slides" is the action here */
+    else if (!sorted) show = false;
+    else label = editing ? "Done" : "These look right \u2014 continue";
+  } else if (step === 4){
+    var names = { operational: "Operational", executive: "Executive", workshop: "Workshop" };
+    label = (editing ? "Done \u2014 keep " : "Continue with ") + names[guidedStyle()] + " style";
+    quiet = !editing;
+  } else if (step === STEPS){
+    label = "Build my deck";
+  }
+  btn.hidden = !show;
+  btn.textContent = label;
+  btn.classList.toggle("secondary", quiet);
+  btn.classList.toggle("big", !quiet);
+}
+["g-audience", "g-purpose"].forEach(function(id){
+  document.getElementById(id).addEventListener("input", paintNext);
+});
+document.getElementById("g-beats").addEventListener("input", paintNext);
 
 /* Picking an answer moves on by itself, after a short pause so the choice is seen. */
 var advanceTimer = null;
@@ -2332,6 +2366,7 @@ function sortFreeText(text, haveAsk, classify){
 
 function setGuideMode(mode){
   var free = mode === "free";
+  setTimeout(paintNext, 0);
   document.getElementById("g-free").hidden = !free;
   document.getElementById("g-prompts").hidden = free;
   document.getElementById("g-mode-free").setAttribute("aria-selected", free);
