@@ -195,6 +195,19 @@
   .checks li::before{content:"\2713"; color:var(--accent); font-weight:700; flex:none}
   .checks li.no::before{content:"\2715"; color:var(--bad)}
   .checks li.warn::before{content:"!"; color:var(--warn)}
+  .guide.wide{max-width:960px}
+  .tiers{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:6px}
+  .tier{border:1px solid var(--rule); border-radius:var(--radius); padding:18px; display:flex; flex-direction:column;
+    gap:12px; background:#fcfbfe}
+  .tier.active{border-color:var(--primary); box-shadow:0 0 0 2px var(--primary)}
+  .tier header{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .tier header h3{margin:0; font-size:17px}
+  .tier header .tag{font-size:12px; font-weight:700; color:var(--primary); background:var(--primary-soft);
+    padding:3px 9px; border-radius:999px}
+  .tier .facts{grid-template-columns:1fr 1fr; margin:0}
+  .tier .secure{margin:0; font-size:13.5px; color:#0d3f44; line-height:1.5}
+  .tier .secure.third{background:#fbf3e2; color:#5c3f00}
+  .tieractions{display:flex; gap:8px; justify-content:flex-end; margin-top:auto; flex-wrap:wrap}
   .aiprogress{margin-top:16px}
   .aiprogress .bar{height:8px; background:var(--surface-2); border-radius:999px; overflow:hidden}
   .aiprogress .fill{height:100%; width:0; background:var(--primary); transition:width .2s}
@@ -356,7 +369,7 @@
     .guide{padding:22px 16px 48px}
     .step{padding:22px 18px}
     .step h2{font-size:22px}
-    .styles, .aigrid, .facts{grid-template-columns:1fr}
+    .styles, .aigrid, .facts, .tiers, .tier .facts{grid-template-columns:1fr}
     .modechip{font-size:11.5px; padding:4px 9px}
     .pill #nettext{display:none}
     .review .row{grid-template-columns:1fr auto}
@@ -531,12 +544,12 @@
 </main>
 
 <!-- ================= supercharged ================= -->
-<main id="screen-ai" class="guide" hidden>
+<main id="screen-ai" class="guide wide" hidden>
   <section class="step aiscreen">
     <div class="eyebrow">Optional</div>
-    <h2 tabindex="-1" id="ai-h">&#10022; Supercharged mode</h2>
-    <p class="why">Adds a small AI model that runs on this device. It helps with the parts rules
-      can't do well, and still works with no internet once it's downloaded.</p>
+    <h2 tabindex="-1" id="ai-h">&#10022; Supercharged</h2>
+    <p class="why" id="ai-why">Adds an AI model that runs on this device. It helps with the parts rules
+      can't do well, and still works with no internet once it's downloaded. Choose the size that suits your device.</p>
 
     <div class="aigrid">
       <div>
@@ -550,22 +563,48 @@
         <h3>What it won't do</h3>
         <ul class="limits">
           <li>Write your deck for you, or add facts you didn't give it.</li>
-          <li>Match a cloud AI &mdash; it's small, so it can misjudge, and it's slower on phones.</li>
+          <li>Match a cloud AI &mdash; it runs on your device, so it can misjudge.</li>
           <li>Hide what it changed &mdash; anything it rewords is marked &#10022; so you can check it.</li>
         </ul>
       </div>
     </div>
 
-    <div class="secure">
-      <h3>Safe and contained</h3>
-      <p>Downloaded once from <b id="ai-origin">this site</b>, over HTTPS &mdash; the same place as the app,
-        with no third parties. Every file is checked against its published SHA-256 fingerprint before it is
-        used, and anything that doesn't match is thrown away. After that it runs with no connection, and
-        nothing you type is ever sent anywhere.</p>
+    <div class="tiers">
+      <article class="tier" id="tier-super" data-tier="super">
+        <header><h3>&#10022; Supercharged</h3><span class="tag">Phones &amp; laptops</span></header>
+        <dl class="facts" data-role="facts"></dl>
+        <div class="secure">
+          <b>Where it comes from:</b> downloaded once from <b data-role="origin">this site</b> over HTTPS &mdash;
+          the same place as the app. Every file is checked against its SHA-256 fingerprint before use;
+          anything that doesn't match is thrown away.
+        </div>
+        <ul class="checks" data-role="checks" aria-live="polite"></ul>
+        <div class="tieractions">
+          <button type="button" class="danger" data-role="remove" hidden>Remove</button>
+          <button type="button" class="big" data-role="go" disabled>Checking this device&hellip;</button>
+        </div>
+      </article>
+
+      <article class="tier" id="tier-pro" data-tier="pro">
+        <header><h3>&#10022; Supercharged Pro</h3><span class="tag">Laptops &amp; desktops only</span></header>
+        <dl class="facts" data-role="facts"></dl>
+        <div class="secure third">
+          <b>Where it comes from:</b> this model is downloaded <b>directly from Mistral AI's official page on
+          Hugging Face</b> (<span data-role="source">huggingface.co</span>), <b>not from this site</b>. Hugging Face will
+          see this device's internet address and that the model was downloaded &mdash; never anything you type.
+          Every file is checked against SHA-256 fingerprints published on this site before use; anything that
+          doesn't match is thrown away.
+        </div>
+        <ul class="checks" data-role="checks" aria-live="polite"></ul>
+        <div class="tieractions">
+          <button type="button" class="danger" data-role="remove" hidden>Remove</button>
+          <button type="button" class="big" data-role="go" disabled>Checking this device&hellip;</button>
+        </div>
+      </article>
     </div>
 
-    <dl class="facts" id="ai-facts"></dl>
-    <ul class="checks" id="ai-checks" aria-live="polite"></ul>
+    <p class="editnote">Either way: after the download it runs with no connection, and nothing you type
+      is ever sent anywhere.</p>
 
     <div class="aiprogress" id="ai-progress" hidden>
       <div class="bar"><div class="fill" id="ai-fill"></div></div>
@@ -576,10 +615,8 @@
     <div class="stepnav">
       <button type="button" class="secondary" id="ai-back">Back</button>
       <span class="spacer"></span>
-      <button type="button" class="danger" id="ai-remove" hidden>Remove from this device</button>
       <button type="button" class="secondary" id="ai-cancel" hidden>Pause download</button>
       <button type="button" class="secondary" id="ai-standard">Use Standard</button>
-      <button type="button" class="big" id="ai-download" disabled>Checking this device&hellip;</button>
     </div>
     <p class="editnote" id="ai-tip" hidden>Tip: add HandsOnDeck to your home screen (Share &rarr; Add to Home Screen on iPhone,
       or Install app in Chrome). Browsers keep an installed app's downloads much longer.</p>
@@ -2186,17 +2223,26 @@ document.getElementById("g-sort").addEventListener("click", function(){
 document.getElementById("g-mode-free").addEventListener("click", function(){ setGuideMode("free"); });
 document.getElementById("g-mode-prompts").addEventListener("click", function(){ setGuideMode("prompts"); });
 
-/* ---------- Supercharged: an optional on-device model ----------
-   Nothing here runs unless the person chooses it. The model, its runtime and the engine
-   are published on this same site by the repository's build workflow, listed in
-   models/manifest.json with a SHA-256 fingerprint for every file. The download below
-   checks each file against that fingerprint before anything uses it, keeps it in this
-   browser, and from then on the model runs with no connection at all. Text the person
-   types is only ever handed to the model inside this page. */
-var AI = { manifest: null, manifestTried: null, engine: null, engineLoading: null,
-           busy: false, abort: null, check: null };
-var AI_CACHE = "handsondeck-ai";
-var LS_MODE = "hod.mode", LS_AI = "hod.ai.installed";
+/* ---------- Supercharged: optional on-device models, in two tiers ----------
+   Nothing here runs unless the person chooses it.
+
+   Supercharged      a small model published on this same site (WebLLM engine).
+   Supercharged Pro  Mistral AI's Ministral 3 3B, downloaded directly from Mistral's official
+                     Hugging Face page (Transformers.js engine, bundled on this site). The
+                     screen says so plainly before anyone downloads.
+
+   Both tiers list every file with a SHA-256 fingerprint in a manifest published on this
+   site (models/manifest.json, models/pro-manifest.json). Each file is streamed, hashed and
+   stored; only a file whose fingerprint matches is marked as checked, and the service
+   worker only ever hands checked files to a model. After that the model runs with no
+   connection, and text the person types is only ever handed to it inside this page. */
+var AI = { m: {}, tried: {}, engine: {}, loading: {}, busy: null, abort: null };
+var AI_CACHE = "handsondeck-ai", AI_OK = "handsondeck-ai-ok";
+var LS_MODE = "hod.mode";
+var TIERS = {
+  super: { ls: "hod.ai.installed", manifest: "models/manifest.json", label: "Supercharged", chip: "✦ Supercharged" },
+  pro:   { ls: "hod.aipro.installed", manifest: "models/pro-manifest.json", label: "Supercharged Pro", chip: "✦ Pro" }
+};
 
 function lsGet(k){ try { return window.localStorage.getItem(k); } catch (e){ return null; } }
 function lsSet(k, v){
@@ -2204,38 +2250,96 @@ function lsSet(k, v){
   catch (e){}
 }
 function siteUrl(rel){ return new URL(rel, location.href).href; }
+function fileUrl(f){ return f.url || siteUrl(f.path); }
 function fmtMB(b){
   var mb = b / 1048576;
   return (mb >= 1000 ? (mb / 1024).toFixed(1) + " GB" : Math.round(mb) + " MB");
 }
-function hex(buf){
-  var a = new Uint8Array(buf), out = "";
-  for (var i = 0; i < a.length; i++) out += (a[i] < 16 ? "0" : "") + a[i].toString(16);
-  return out;
-}
 function contentTypeFor(p){
   if (/\.wasm$/.test(p)) return "application/wasm";
   if (/\.json$/.test(p)) return "application/json";
-  if (/\.js$/.test(p)) return "text/javascript";
+  if (/\.m?js$/.test(p)) return "text/javascript";
   return "application/octet-stream";
 }
 
-function loadManifest(){
-  if (AI.manifestTried) return AI.manifestTried;
-  if (location.protocol === "file:"){ AI.manifestTried = Promise.resolve(null); return AI.manifestTried; }
-  AI.manifestTried = fetch("models/manifest.json", { cache: "no-cache" })
-    .then(function(r){ return r.ok ? r.json() : null; })
-    .then(function(m){ AI.manifest = (m && m.model && m.files) ? m : null; return AI.manifest; })
-    .catch(function(){ return null; });
-  return AI.manifestTried;
+/* Streaming SHA-256, so a 2 GB file can be checked without holding it in memory. */
+function Sha256(){
+  this.h = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];
+  this.buf = new Uint8Array(64); this.n = 0; this.len = 0; this.w = new Uint32Array(64);
 }
+Sha256.K = new Uint32Array([
+  0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,
+  0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,
+  0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,
+  0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+  0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,
+  0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,
+  0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2]);
+Sha256.prototype.block = function(b, o){
+  var w = this.w, K = Sha256.K, i, t1, t2;
+  for (i = 0; i < 16; i++) w[i] = (b[o + 4*i] << 24) | (b[o + 4*i + 1] << 16) | (b[o + 4*i + 2] << 8) | b[o + 4*i + 3];
+  for (i = 16; i < 64; i++){
+    var x = w[i-15], y = w[i-2];
+    var s0 = ((x >>> 7) | (x << 25)) ^ ((x >>> 18) | (x << 14)) ^ (x >>> 3);
+    var s1 = ((y >>> 17) | (y << 15)) ^ ((y >>> 19) | (y << 13)) ^ (y >>> 10);
+    w[i] = (w[i-16] + s0 + w[i-7] + s1) | 0;
+  }
+  var h = this.h, a = h[0], bb = h[1], c = h[2], d = h[3], e = h[4], f = h[5], g = h[6], hh = h[7];
+  for (i = 0; i < 64; i++){
+    t1 = (hh + (((e >>> 6) | (e << 26)) ^ ((e >>> 11) | (e << 21)) ^ ((e >>> 25) | (e << 7))) +
+      ((e & f) ^ (~e & g)) + K[i] + w[i]) | 0;
+    t2 = ((((a >>> 2) | (a << 30)) ^ ((a >>> 13) | (a << 19)) ^ ((a >>> 22) | (a << 10))) +
+      ((a & bb) ^ (a & c) ^ (bb & c))) | 0;
+    hh = g; g = f; f = e; e = (d + t1) | 0; d = c; c = bb; bb = a; a = (t1 + t2) | 0;
+  }
+  h[0] = (h[0] + a) | 0; h[1] = (h[1] + bb) | 0; h[2] = (h[2] + c) | 0; h[3] = (h[3] + d) | 0;
+  h[4] = (h[4] + e) | 0; h[5] = (h[5] + f) | 0; h[6] = (h[6] + g) | 0; h[7] = (h[7] + hh) | 0;
+};
+Sha256.prototype.update = function(data){
+  var i = 0, len = data.length;
+  this.len += len;
+  if (this.n){
+    while (this.n < 64 && i < len) this.buf[this.n++] = data[i++];
+    if (this.n === 64){ this.block(this.buf, 0); this.n = 0; }
+  }
+  for (; i + 64 <= len; i += 64) this.block(data, i);
+  while (i < len) this.buf[this.n++] = data[i++];
+};
+Sha256.prototype.hex = function(){
+  var bits = this.len * 8, pad = new Uint8Array(((this.n < 56) ? 56 : 120) - this.n + 8);
+  pad[0] = 0x80;
+  var hi = Math.floor(bits / 4294967296), lo = bits >>> 0, L = pad.length;
+  pad[L-8] = hi >>> 24; pad[L-7] = hi >>> 16; pad[L-6] = hi >>> 8; pad[L-5] = hi;
+  pad[L-4] = lo >>> 24; pad[L-3] = lo >>> 16; pad[L-2] = lo >>> 8; pad[L-1] = lo;
+  this.len -= pad.length; this.update(pad);
+  var out = "";
+  for (var i = 0; i < 8; i++) out += ("00000000" + (this.h[i] >>> 0).toString(16)).slice(-8);
+  return out;
+};
 
-function installedKey(m){ return m.model.id + "@" + m.engine.version; }
-function aiInstalled(){
-  var v = lsGet(LS_AI);
-  return !!(v && (!AI.manifest || v === installedKey(AI.manifest)));
+function loadManifest(tier){
+  if (AI.tried[tier]) return AI.tried[tier];
+  if (location.protocol === "file:"){ AI.tried[tier] = Promise.resolve(null); return AI.tried[tier]; }
+  AI.tried[tier] = fetch(TIERS[tier].manifest, { cache: "no-cache" })
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(m){ AI.m[tier] = (m && m.model && m.files) ? m : null; return AI.m[tier]; })
+    .catch(function(){ return null; });
+  return AI.tried[tier];
 }
-function aiReady(){ return lsGet(LS_MODE) === "super" && aiInstalled(); }
+function loadManifests(){ return Promise.all([loadManifest("super"), loadManifest("pro")]); }
+
+function installedKey(tier, m){
+  return m.model.id + "@" + (tier === "pro" ? (m.model.revision || "") : m.engine.version);
+}
+function tierInstalled(tier){
+  var v = lsGet(TIERS[tier].ls), m = AI.m[tier];
+  return !!(v && (!m || v === installedKey(tier, m)));
+}
+function activeTier(){
+  var mode = lsGet(LS_MODE);
+  return (mode === "super" || mode === "pro") && tierInstalled(mode) ? mode : null;
+}
+function aiReady(){ return !!activeTier(); }
 
 function appConfigFor(m){
   var rec = {};
@@ -2244,27 +2348,31 @@ function appConfigFor(m){
   rec.model_lib = siteUrl(m.model.record.model_lib);
   return { model_list: [rec] };
 }
-
 function engineModule(m){
-  if (typeof window.__hodEngineFactory === "object") return Promise.resolve(window.__hodEngineFactory);
+  if (window.__hodEngines && window.__hodEngines[m.engine.name]) return Promise.resolve(window.__hodEngines[m.engine.name]);
   return import(siteUrl(m.engine.path));
 }
 
-/* Device check: decides whether Supercharged is offered at all, and says why not. */
-function deviceCheck(m){
+/* Device check: decides whether a tier is offered here at all, and says why not. */
+function deviceCheck(tier, m){
   var res = { ok: true, items: [] };
   function add(state, text){ res.items.push({ state: state, text: text }); if (state === "no") res.ok = false; }
   if (location.protocol === "file:" || !window.isSecureContext){
-    add("no", "Open HandsOnDeck from its web address, not a saved copy, to set up Supercharged.");
+    add("no", "Open HandsOnDeck from its web address, not a saved copy, to set this up.");
     return Promise.resolve(res);
   }
   if (!m){
-    add("no", "Supercharged isn't published on this site yet. Standard works fully in the meantime.");
+    add("no", "Not published on this site yet. Standard works fully in the meantime.");
     return Promise.resolve(res);
   }
-  if (!("serviceWorker" in navigator) || !window.caches || !(window.crypto && crypto.subtle)){
+  if (!("serviceWorker" in navigator) || !window.caches || !window.ReadableStream){
     add("no", "This browser can't store an offline download safely.");
     return Promise.resolve(res);
+  }
+  if (tier === "pro"){
+    var mobile = (navigator.userAgentData && navigator.userAgentData.mobile) ||
+      /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
+    if (mobile) add("no", "Supercharged Pro needs a laptop or desktop. On this device, use Supercharged.");
   }
   var chain = Promise.resolve();
   if (!navigator.gpu){
@@ -2272,21 +2380,23 @@ function deviceCheck(m){
   } else {
     chain = navigator.gpu.requestAdapter().then(function(adapter){
       if (!adapter){ add("no", "No usable graphics processor was found for the on-device AI."); return; }
-      var need = m.model.record.required_features || [];
+      var need = (m.model.requiredFeatures || (m.model.record && m.model.record.required_features)) || [];
       var missing = need.filter(function(f){ return !adapter.features.has(f); });
       if (missing.length) add("no", "This device's graphics processor is missing a feature the model needs (" + missing.join(", ") + ").");
-      else add("yes", "Graphics processor supports the on-device AI.");
+      else add("yes", "Graphics processor supports it.");
     }).catch(function(){ add("no", "The graphics processor couldn't be reached."); });
   }
   return chain.then(function(){
-    if (navigator.deviceMemory && navigator.deviceMemory < 4){
-      add("warn", "This device reports under 4 GB of memory, so the AI may be slow or fail to load.");
+    var minMem = tier === "pro" ? 8 : 4;
+    if (navigator.deviceMemory && navigator.deviceMemory < minMem){
+      add(tier === "pro" ? "no" : "warn", "This device reports under " + minMem + " GB of memory" +
+        (tier === "pro" ? ", which isn't enough for Supercharged Pro." : ", so the AI may be slow or fail to load."));
     }
     if (navigator.storage && navigator.storage.estimate){
       return navigator.storage.estimate().then(function(est){
         var free = (est.quota || 0) - (est.usage || 0);
-        var need = m.totalBytes * 2.1;   /* checked copy plus the model's own copy, briefly */
-        if (est.quota && free < need) add("no", "Not enough free storage: needs about " + fmtMB(need) + " while installing, " + fmtMB(free) + " available.");
+        var need = m.totalBytes * (tier === "pro" ? 1.1 : 2.1);
+        if (est.quota && free < need) add("no", "Not enough free storage: needs about " + fmtMB(need) + ", " + fmtMB(free) + " available.");
         else add("yes", "Enough free storage.");
       }).catch(function(){});
     }
@@ -2316,53 +2426,56 @@ function aiError(msg){
 }
 function paintModeChip(){
   var chip = document.getElementById("mode-chip");
-  var on = aiReady();
-  chip.textContent = on ? "✦ Supercharged" : "Standard";
-  chip.classList.toggle("on", on);
+  var t = activeTier();
+  chip.textContent = t ? TIERS[t].chip : "Standard";
+  chip.classList.toggle("on", !!t);
   var els = document.querySelectorAll(".ai-only");
-  for (var i = 0; i < els.length; i++) els[i].hidden = !on;
-  document.getElementById("btn-tighten").disabled = !(on && plan);
+  for (var i = 0; i < els.length; i++) els[i].hidden = !t;
+  document.getElementById("btn-tighten").disabled = !(t && plan);
   document.getElementById("mode-choice").hidden = !!lsGet(LS_MODE);
 }
 
-function paintAIScreen(){
-  var m = AI.manifest;
-  var facts = document.getElementById("ai-facts");
+function paintTier(tier){
+  var m = AI.m[tier], card = document.getElementById("tier-" + tier);
+  function role(r){ return card.querySelector('[data-role="' + r + '"]'); }
+  var facts = role("facts");
   facts.innerHTML = "";
-  document.getElementById("ai-origin").textContent = location.host || "this site";
+  if (role("origin")) role("origin").textContent = location.host || "this site";
   if (m){
     [["Download", fmtMB(m.totalBytes) + ", once"],
-     ["Model", (m.model.name || m.model.id) + (m.model.publisher ? " \u00B7 " + m.model.publisher : "")],
-     ["Works offline", "Yes, after download"]].forEach(function(f){
-      var d = document.createElement("div");
-      var dt = document.createElement("dt"); dt.textContent = f[0];
-      var dd = document.createElement("dd"); dd.textContent = f[1];
-      d.appendChild(dt); d.appendChild(dd); facts.appendChild(d);
-    });
+     ["Model", (m.model.name || m.model.id) + (m.model.publisher ? " · " + m.model.publisher : "")]]
+      .forEach(function(f){
+        var d = document.createElement("div");
+        var dt = document.createElement("dt"); dt.textContent = f[0];
+        var dd = document.createElement("dd"); dd.textContent = f[1];
+        d.appendChild(dt); d.appendChild(dd); facts.appendChild(d);
+      });
+    if (role("source") && m.model.source) role("source").textContent = m.model.source.replace(/^https?:\/\//, "");
   }
-  var installed = aiInstalled() && !!m;
-  var prev = lsGet(LS_AI);
-  var swapped = !!(m && prev && prev !== installedKey(m));
-  var why = document.querySelector("#screen-ai .why");
-  why.textContent = swapped
-    ? "This site now uses a different model (" + (m.model.name || m.model.id) + "). Download it to keep using Supercharged \u2014 the old one will be removed from this device."
-    : "Adds a small AI model that runs on this device. It helps with the parts rules can't do well, and still works with no internet once it's downloaded.";
-  var dl = document.getElementById("ai-download");
-  document.getElementById("ai-remove").hidden = !installed || AI.busy;
-  document.getElementById("ai-cancel").hidden = !AI.busy;
-  document.getElementById("ai-tip").hidden = !installed;
-  if (AI.busy){ dl.disabled = true; dl.textContent = "Working…"; return; }
+  var installed = tierInstalled(tier) && !!m;
+  var prev = lsGet(TIERS[tier].ls);
+  var swapped = !!(m && prev && prev !== installedKey(tier, m));
+  card.classList.toggle("active", activeTier() === tier);
+  var go = role("go"), rm = role("remove"), checks = role("checks");
+  rm.hidden = !installed || !!AI.busy;
+  if (AI.busy){ go.disabled = true; go.textContent = AI.busy === tier ? "Working…" : "Wait…"; return; }
   if (installed){
-    dl.disabled = false;
-    dl.textContent = lsGet(LS_MODE) === "super" ? "Use Supercharged" : "Switch to Supercharged";
+    checks.innerHTML = "";
+    go.disabled = false;
+    go.textContent = activeTier() === tier ? "In use" : "Use " + TIERS[tier].label;
+    if (activeTier() === tier) go.disabled = true;
     return;
   }
-  dl.disabled = true;
-  dl.textContent = "Checking this device…";
-  var checks = document.getElementById("ai-checks");
-  deviceCheck(m).then(function(res){
-    AI.check = res;
+  go.disabled = true;
+  go.textContent = "Checking this device…";
+  deviceCheck(tier, m).then(function(res){
     checks.innerHTML = "";
+    if (swapped){
+      var li0 = document.createElement("li"); li0.className = "warn";
+      li0.textContent = "This site now uses a different model. Download it to keep using " + TIERS[tier].label +
+        " — the old one will be removed from this device.";
+      checks.appendChild(li0);
+    }
     res.items.forEach(function(it){
       var li = document.createElement("li");
       li.className = it.state === "yes" ? "" : it.state;
@@ -2370,112 +2483,232 @@ function paintAIScreen(){
       checks.appendChild(li);
     });
     if (AI.busy) return;
-    dl.disabled = !res.ok;
-    dl.textContent = res.ok ? "Download " + fmtMB(m.totalBytes) : "Not available here";
+    go.disabled = !res.ok;
+    go.textContent = res.ok ? "Download " + fmtMB(m.totalBytes) : "Not available here";
   });
+}
+
+function paintAIScreen(){
+  paintTier("super"); paintTier("pro");
+  document.getElementById("ai-cancel").hidden = !AI.busy;
+  document.getElementById("ai-tip").hidden = !(tierInstalled("super") || tierInstalled("pro"));
 }
 
 function openAIScreen(){
   aiError("");
   showScreen("ai");
-  loadManifest().then(paintAIScreen);
+  loadManifests().then(paintAIScreen);
   document.getElementById("ai-h").focus();
 }
 
-/* Download every file, check its fingerprint, keep only files that match. Files already
-   checked are skipped, so a paused or interrupted download picks up where it stopped. */
+/* Stream every file into storage while hashing it; mark it checked only if the fingerprint
+   matches. Checked files are skipped next time, so a paused download picks up where it
+   stopped, and a file that fails is deleted. */
 function aiDownload(m, signal){
   var total = m.totalBytes, done = 0;
-  return ensureServiceWorkerControl().then(function(){ return caches.open(AI_CACHE); }).then(function(cache){
-    var i = 0;
+  return ensureServiceWorkerControl().then(function(){
+    return Promise.all([caches.open(AI_CACHE), caches.open(AI_OK)]);
+  }).then(function(cs){
+    var cache = cs[0], ok = cs[1], i = 0;
     function next(){
       if (i >= m.files.length) return Promise.resolve(cache);
-      var f = m.files[i++], url = siteUrl(f.path);
-      return cache.match(url).then(function(hit){
-        if (hit && hit.headers.get("x-hod-sha256") === f.sha256){ done += f.size; return next(); }
-        return fetch(url, { cache: "no-store", signal: signal }).then(function(res){
-          if (!res.ok) throw new Error("Couldn't download " + f.path + " (" + res.status + ").");
-          var reader = res.body.getReader(), chunks = [], got = 0;
+      var f = m.files[i++], url = fileUrl(f);
+      return Promise.all([ok.match(url), cache.match(url)]).then(function(hits){
+        if (hits[0] && hits[1]){
+          return hits[0].text().then(function(t){
+            if (t === f.sha256){ done += f.size; return; }
+            return fetchOne();
+          });
+        }
+        return fetchOne();
+      }).then(next);
+
+      function fetchOne(){
+        return ok.delete(url).then(function(){
+          return fetch(url, { cache: "no-store", signal: signal, mode: "cors", credentials: "omit" });
+        }).then(function(res){
+          if (!res.ok) throw new Error("Couldn't download " + (f.path || f.url) + " (" + res.status + ").");
+          var parts = res.body.tee();
+          var stored = cache.put(url, new Response(parts[0], { headers: {
+            "content-type": contentTypeFor(f.path || f.url) } }));
+          var hasher = new Sha256(), reader = parts[1].getReader(), got = 0;
           function pump(){
             return reader.read().then(function(r){
               if (r.done) return;
-              chunks.push(r.value); got += r.value.length;
-              aiSetProgress((done + got) / total * 0.85,
+              hasher.update(r.value); got += r.value.length;
+              aiSetProgress((done + got) / total * (m.tier === "pro" ? 0.9 : 0.85),
                 "Downloading and checking — " + fmtMB(done + got) + " of " + fmtMB(total));
               return pump();
             });
           }
-          return pump().then(function(){
-            var blob = new Blob(chunks);
-            return blob.arrayBuffer().then(function(buf){ return crypto.subtle.digest("SHA-256", buf); })
-              .then(function(digest){
-                var h = hex(digest);
-                if (h !== f.sha256){
-                  throw new Error("A downloaded file didn't match its fingerprint (" + f.path +
-                    "), so it was discarded and nothing was installed. Try again later.");
-                }
-                done += f.size;
-                return cache.put(url, new Response(blob, { headers: {
-                  "content-type": contentTypeFor(f.path), "x-hod-sha256": h } }));
+          return Promise.all([pump(), stored]).then(function(){
+            var h = hasher.hex();
+            if (h !== f.sha256){
+              return cache.delete(url).then(function(){
+                throw new Error("A downloaded file didn't match its fingerprint (" + (f.path || f.url.split("/").pop()) +
+                  "), so it was discarded and nothing was installed. Try again later.");
               });
+            }
+            done += f.size;
+            return ok.put(url, new Response(h));
           });
         });
-      }).then(next);
+      }
     }
     return next();
   });
 }
 
-function aiStartEngine(m, onProgress){
-  if (AI.engine) return Promise.resolve(AI.engine);
-  if (AI.engineLoading) return AI.engineLoading;
-  AI.engineLoading = engineModule(m).then(function(mod){
-    return mod.CreateMLCEngine(m.model.id, {
-      appConfig: appConfigFor(m),
-      initProgressCallback: function(r){ if (onProgress) onProgress(r); }
-    });
+/* Engines, behind one small interface: chat(messages, maxTokens) -> text. */
+function startEngine(tier, onProgress){
+  if (AI.engine[tier]) return Promise.resolve(AI.engine[tier]);
+  if (AI.loading[tier]) return AI.loading[tier];
+  var m = AI.m[tier];
+  AI.loading[tier] = engineModule(m).then(function(mod){
+    return tier === "pro" ? startTransformers(mod, m, onProgress) : startWebLLM(mod, m, onProgress);
   }).then(function(engine){
-    AI.engine = engine; AI.engineLoading = null; return engine;
+    AI.engine[tier] = engine; AI.loading[tier] = null; return engine;
   }, function(err){
-    AI.engineLoading = null; throw err;
+    AI.loading[tier] = null; throw err;
   });
-  return AI.engineLoading;
+  return AI.loading[tier];
 }
 
-function aiInstall(){
-  var m = AI.manifest;
+function startWebLLM(mod, m, onProgress){
+  return mod.CreateMLCEngine(m.model.id, {
+    appConfig: appConfigFor(m),
+    initProgressCallback: function(r){ if (onProgress) onProgress(r.progress || 0); }
+  }).then(function(engine){
+    return {
+      raw: engine,
+      unload: function(){ if (engine.unload) engine.unload(); },
+      chat: function(messages, maxTokens){
+        return engine.chat.completions.create({ messages: messages, temperature: 0, max_tokens: maxTokens })
+          .then(function(r){ return ((r.choices && r.choices[0] && r.choices[0].message.content) || "").trim(); });
+      }
+    };
+  });
+}
+
+/* Ministral 3 3B through Transformers.js, following Mistral's published browser usage.
+   The library's own download cache is off: files come only from the checked copies the
+   service worker holds, and its runtime files load from this site, not a CDN. */
+function startTransformers(T, m, onProgress){
+  T.env.allowLocalModels = false;
+  T.env.useBrowserCache = false;
+  if (m.model.host) T.env.remoteHost = m.model.host;
+  if (T.env.backends && T.env.backends.onnx && T.env.backends.onnx.wasm) {
+    T.env.backends.onnx.wasm.wasmPaths = siteUrl(m.engine.runtimePath || "vendor/ort/");
+  }
+  var opts = { revision: m.model.revision };
+  var seen = {}, totalBytes = m.totalBytes || 1;
+  var modelOpts = { revision: m.model.revision, device: "webgpu", dtype: m.model.dtype,
+    progress_callback: function(p){
+      if (!onProgress || !p || !p.file) return;
+      if (typeof p.loaded === "number") seen[p.file] = p.loaded;
+      var sum = 0; for (var k in seen) sum += seen[k];
+      onProgress(Math.min(1, sum / totalBytes));
+    } };
+  return Promise.all([
+    T.AutoProcessor.from_pretrained(m.model.repo, opts),
+    T.AutoModelForImageTextToText.from_pretrained(m.model.repo, modelOpts)
+  ]).then(function(r){
+    var processor = r[0], model = r[1];
+    function template(messages){
+      var parts = messages.map(function(x){ return { role: x.role, content: [{ type: "text", text: x.content }] }; });
+      try { return processor.apply_chat_template(parts, { add_generation_prompt: true }); }
+      catch (e){
+        /* Some chat templates don't take a system turn: fold it into the first user turn. */
+        var sys = messages[0].role === "system" ? messages[0].content + "\n\n" : "";
+        var rest = messages.slice(sys ? 1 : 0).map(function(x, i){
+          return { role: x.role, content: [{ type: "text", text: (i === 0 ? sys : "") + x.content }] };
+        });
+        return processor.apply_chat_template(rest, { add_generation_prompt: true });
+      }
+    }
+    return {
+      unload: function(){ if (model.dispose) model.dispose(); },
+      chat: function(messages, maxTokens){
+        var prompt = template(messages);
+        var tok = processor.tokenizer || processor;
+        var inputs = tok(prompt, { add_special_tokens: false });
+        var n = inputs.input_ids.dims[inputs.input_ids.dims.length - 1];
+        return model.generate(Object.assign({}, inputs, { max_new_tokens: maxTokens, do_sample: false }))
+          .then(function(out){
+            var text = processor.batch_decode(out.slice(null, [n, null]), { skip_special_tokens: true })[0];
+            return String(text || "").trim();
+          });
+      }
+    };
+  });
+}
+
+function clearTier(tier){
+  var m = AI.m[tier], prevLs = lsGet(TIERS[tier].ls);
+  if (AI.engine[tier] && AI.engine[tier].unload){ try { AI.engine[tier].unload(); } catch (e){} }
+  AI.engine[tier] = null;
+  var drops = [];
+  if (tier === "super"){
+    ["webllm/model", "webllm/config", "webllm/wasm"].forEach(function(n){ drops.push(caches.delete(n)); });
+  }
+  /* Drop this tier's checked files; keep anything the other tier still needs. */
+  var other = AI.m[tier === "super" ? "pro" : "super"];
+  var keepUrls = {};
+  if (other && tierInstalled(tier === "super" ? "pro" : "super")) other.files.forEach(function(f){ keepUrls[fileUrl(f)] = 1; });
+  drops.push(Promise.all([caches.open(AI_CACHE), caches.open(AI_OK)]).then(function(cs){
+    return Promise.all([cs[0].keys(), cs[1].keys()]).then(function(ks){
+      var mine = {};
+      if (m) m.files.forEach(function(f){ mine[fileUrl(f)] = 1; });
+      return Promise.all(ks[0].concat(ks[1]).map(function(req){
+        var u = req.url;
+        if (keepUrls[u]) return null;
+        /* Files of this tier, or of an older model this tier used before a swap. */
+        var oldOwn = prevLs && !mine[u] && (tier === "pro" ? /\/resolve\//.test(u) : /\/models\//.test(u) && !/pro-manifest/.test(u));
+        if (mine[u] || oldOwn) return Promise.all([cs[0].delete(req), cs[1].delete(req)]);
+        return null;
+      }));
+    });
+  }));
+  return Promise.all(drops).catch(function(){}).then(function(){ lsSet(TIERS[tier].ls, null); });
+}
+
+function aiInstall(tier){
+  var m = AI.m[tier];
   if (!m || AI.busy) return;
-  AI.busy = true; aiError(""); paintAIScreen();
+  AI.busy = tier; aiError(""); paintAIScreen();
   AI.abort = window.AbortController ? new AbortController() : null;
-  /* A different model installed earlier: clear it out first so storage isn't used twice. */
-  var prevKey = lsGet(LS_AI);
-  var clearOld = (prevKey && prevKey !== installedKey(m))
-    ? Promise.all(["webllm/model", "webllm/config", "webllm/wasm", AI_CACHE].map(function(n){ return caches.delete(n); }))
-        .then(function(){ lsSet(LS_AI, null); AI.engine = null; })
-    : Promise.resolve();
+  m.tier = tier;
+  var prevKey = lsGet(TIERS[tier].ls);
+  var clearOld = (prevKey && prevKey !== installedKey(tier, m)) ? clearTier(tier) : Promise.resolve();
+  var split = tier === "pro" ? 0.9 : 0.85;
   clearOld.then(function(){ return aiDownload(m, AI.abort && AI.abort.signal); }).then(function(cache){
-    aiSetProgress(0.85, "All files checked. Setting up the model on this device…");
-    return aiStartEngine(m, function(r){
-      aiSetProgress(0.85 + 0.15 * (r.progress || 0), "Setting up the model on this device…");
+    aiSetProgress(split, "All files checked. Setting up the model on this device…");
+    return startEngine(tier, function(p){
+      aiSetProgress(split + (1 - split) * p, "Setting up the model on this device…");
     }).then(function(){
-      /* The model now keeps its own copy; drop the checked model files so storage isn't
-         used twice. The engine and the manifest stay, so the app can start it offline. */
-      return Promise.all(m.files.map(function(f){
-        return f.keep ? null : cache.delete(siteUrl(f.path));
-      })).then(function(){
-        return cache.put(siteUrl("models/manifest.json"), new Response(JSON.stringify(m),
+      return caches.open(AI_CACHE).then(function(c){
+        return c.put(siteUrl(TIERS[tier].manifest), new Response(JSON.stringify(m),
           { headers: { "content-type": "application/json" } }));
+      }).then(function(){
+        if (tier !== "super") return;
+        /* WebLLM keeps its own copy of the model; drop the checked copies so storage isn't
+           used twice. The engine stays, so the app can start the model offline. */
+        return Promise.all([caches.open(AI_CACHE), caches.open(AI_OK)]).then(function(cs){
+          return Promise.all(m.files.map(function(f){
+            return f.keep ? null : Promise.all([cs[0].delete(fileUrl(f)), cs[1].delete(fileUrl(f))]);
+          }));
+        });
       });
     });
   }).then(function(){
-    lsSet(LS_AI, installedKey(m));
-    lsSet(LS_MODE, "super");
+    lsSet(TIERS[tier].ls, installedKey(tier, m));
+    lsSet(LS_MODE, tier);
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function(){});
-    aiSetProgress(1, "Ready. Supercharged now works on this device, with or without internet.");
-    AI.busy = false; paintAIScreen(); paintModeChip();
-    notify("Supercharged is on. Look for ✦ in the guided steps and above the deck.");
+    aiSetProgress(1, "Ready. " + TIERS[tier].label + " now works on this device, with or without internet.");
+    AI.busy = null; paintAIScreen(); paintModeChip();
+    notify(TIERS[tier].label + " is on. Look for ✦ in the guided steps and above the deck.");
   }).catch(function(err){
-    AI.busy = false;
+    AI.busy = null;
     var aborted = err && err.name === "AbortError";
     aiError(aborted ? "" : (err && err.message) || "Setup didn't finish.");
     aiSetProgress(0, aborted ? "Paused. Checked files are kept — Download picks up where it stopped."
@@ -2484,32 +2717,28 @@ function aiInstall(){
   });
 }
 
-function aiRemove(){
-  var m = AI.manifest;
-  var drop = m ? engineModule(m).then(function(mod){
-    if (AI.engine && AI.engine.unload) AI.engine.unload();
-    if (mod.deleteModelAllInfoInCache) return mod.deleteModelAllInfoInCache(m.model.id, appConfigFor(m));
-  }).catch(function(){}) : Promise.resolve();
-  drop.then(function(){ return caches.delete(AI_CACHE); }).catch(function(){}).then(function(){
-    AI.engine = null;
-    lsSet(LS_AI, null); lsSet(LS_MODE, "standard");
+function aiRemove(tier){
+  clearTier(tier).then(function(){
+    if (lsGet(LS_MODE) === tier) lsSet(LS_MODE, tierInstalled(tier === "pro" ? "super" : "pro") ? (tier === "pro" ? "super" : "pro") : "standard");
     document.getElementById("ai-progress").hidden = true;
     paintAIScreen(); paintModeChip();
-    notify("Supercharged removed from this device. Standard mode is on.");
+    notify(TIERS[tier].label + " removed from this device.");
   });
 }
 
-/* Run one task on the model, starting it first if this is the first use this visit. */
-function withEngine(label){
-  var m = AI.manifest;
-  if (!m) return loadManifest().then(function(mm){
-    if (!mm) throw new Error("Supercharged isn't available right now.");
-    return withEngine(label);
+/* Run one task on the active model, starting it first if this is the first use this visit. */
+function withEngine(){
+  var tier = activeTier();
+  if (!tier) return Promise.reject(new Error("Turn on Supercharged from the ✦ button in the top bar."));
+  var m = AI.m[tier];
+  if (!m) return loadManifest(tier).then(function(mm){
+    if (!mm) throw new Error(TIERS[tier].label + " isn't available right now.");
+    return withEngine();
   });
-  if (!AI.engine) notify("Starting the on-device AI…");
-  return aiStartEngine(m).catch(function(err){
+  if (!AI.engine[tier]) notify("Starting the on-device AI…");
+  return startEngine(tier).catch(function(err){
     throw new Error("The on-device AI couldn't start (" + ((err && err.message) || "unknown error") +
-      "). It may have been cleared by the browser — set it up again from ✦ Supercharged. Standard mode still works.");
+      "). It may have been cleared by the browser — set it up again from ✦ in the top bar. Standard mode still works.");
   });
 }
 
@@ -2517,8 +2746,7 @@ function ask(engine, system, shots, user, maxTokens){
   var msgs = [{ role: "system", content: system }];
   shots.forEach(function(p){ msgs.push({ role: "user", content: p[0] }, { role: "assistant", content: p[1] }); });
   msgs.push({ role: "user", content: user });
-  return engine.chat.completions.create({ messages: msgs, temperature: 0, max_tokens: maxTokens })
-    .then(function(r){ return ((r.choices && r.choices[0] && r.choices[0].message.content) || "").trim(); });
+  return engine.chat(msgs, maxTokens);
 }
 
 var SORT_SYSTEM = "You sort sentences from a work update into slide sections. Reply with exactly one word: " +
@@ -2650,22 +2878,27 @@ document.getElementById("ai-standard").addEventListener("click", function(){
   if (!AI.busy) lsSet(LS_MODE, "standard");
   paintModeChip(); showScreen(plan ? "work" : "welcome");
 });
-document.getElementById("ai-download").addEventListener("click", function(){
-  if (aiInstalled() && AI.manifest){
-    lsSet(LS_MODE, "super"); paintModeChip();
-    notify("Supercharged is on.");
-    showScreen(plan ? "work" : "welcome");
-    return;
-  }
-  aiInstall();
+["super", "pro"].forEach(function(tier){
+  var card = document.getElementById("tier-" + tier);
+  card.querySelector('[data-role="go"]').addEventListener("click", function(){
+    if (tierInstalled(tier) && AI.m[tier]){
+      lsSet(LS_MODE, tier); paintModeChip(); paintAIScreen();
+      notify(TIERS[tier].label + " is on.");
+      return;
+    }
+    aiInstall(tier);
+  });
+  card.querySelector('[data-role="remove"]').addEventListener("click", function(){ aiRemove(tier); });
 });
 document.getElementById("ai-cancel").addEventListener("click", function(){ if (AI.abort) AI.abort.abort(); });
-document.getElementById("ai-remove").addEventListener("click", aiRemove);
 document.getElementById("g-sort-ai").addEventListener("click", aiSortFreeText);
 document.getElementById("btn-tighten").addEventListener("click", function(){ aiTightenHeadlines(false); });
 
-loadManifest().then(function(m){
-  if (m) document.getElementById("mc-size").textContent = fmtMB(m.totalBytes) + " one-time download";
+loadManifests().then(function(ms){
+  var parts = [];
+  if (ms[0]) parts.push(fmtMB(ms[0].totalBytes));
+  if (ms[1]) parts.push(fmtMB(ms[1].totalBytes) + " Pro");
+  if (parts.length) document.getElementById("mc-size").textContent = parts.join(" or ") + ", one-time download";
   paintModeChip();
 });
 

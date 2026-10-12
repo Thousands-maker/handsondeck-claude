@@ -9,18 +9,30 @@
  * the cache in the background when a network happens to be available.
  */
 
-var VERSION = "handsondeck-v3";
-
-/* Supercharged mode (optional). Files the page has downloaded AND checked against their
-   SHA-256 fingerprints live in this cache; the worker serves them from here so the model
-   only ever receives checked bytes, and so the engine starts with no connection. */
-var AI_CACHE = "handsondeck-ai";
+var VERSION = "handsondeck-v4";
 var SHELL = [
   "./",
   "./index.html",
   "./manifest.webmanifest",
   "./icon.svg"
 ];
+
+/* Supercharged (optional). The page streams each model file into AI_CACHE and, only once
+   its SHA-256 matches the published fingerprint, records it in AI_OK. The worker hands a
+   model nothing but files recorded in AI_OK, so a model only ever receives checked bytes,
+   and it can start with no connection. This covers the Pro model's files on Hugging Face
+   as well as files on this site. */
+var AI_CACHE = "handsondeck-ai";
+var AI_OK = "handsondeck-ai-ok";
+
+function checkedCopy(req) {
+  return caches.open(AI_OK).then(function (ok) {
+    return ok.match(req.url, { ignoreSearch: true });
+  }).then(function (mark) {
+    if (!mark) return null;
+    return caches.open(AI_CACHE).then(function (c) { return c.match(req.url, { ignoreSearch: true }); });
+  });
+}
 
 self.addEventListener("install", function (event) {
   event.waitUntil(
@@ -43,7 +55,7 @@ self.addEventListener("activate", function (event) {
     caches.keys().then(function (keys) {
       return Promise.all(
         keys.map(function (key) {
-          return (key === VERSION || key === AI_CACHE || key.indexOf("webllm") === 0)
+          return (key === VERSION || key === AI_CACHE || key === AI_OK || key.indexOf("webllm") === 0)
             ? null : caches.delete(key);
         })
       );
@@ -59,23 +71,32 @@ self.addEventListener("fetch", function (event) {
   // Only handle same-origin GETs. Everything else is passed straight through.
   if (req.method !== "GET") return;
   var url = new URL(req.url);
+  var hfModel = /(^|\.)huggingface\.co$/.test(url.hostname) && /\/resolve\//.test(url.pathname);
+
+  // Supercharged Pro model files on Hugging Face: checked copy first. Offline and not
+  // stored, answer 404 (as Hugging Face would for an optional file) rather than failing.
+  if (hfModel) {
+    event.respondWith(checkedCopy(req).then(function (hit) {
+      return hit || fetch(req).catch(function () { return new Response("", { status: 404 }); });
+    }));
+    return;
+  }
   if (url.origin !== self.location.origin) return;
 
-  // Model and engine files: checked copies first, never copied into the app cache
-  // (they are hundreds of MB). The manifest goes to the network first so an updated
-  // model is noticed, falling back to the saved copy offline.
-  if (/\/(models|vendor)\//.test(url.pathname)) {
-    if (/\/models\/manifest\.json$/.test(url.pathname)) {
+  // Model and engine files on this site: checked copies first, never copied into the app
+  // cache (they are hundreds of MB). Manifests go to the network first so a new model is
+  // noticed, falling back to the saved copy offline.
+  if (/\/(models|vendor)\//.test(url.pathname) || /\/resolve\//.test(url.pathname)) {
+    if (/\/models\/[\w-]*manifest\.json$/.test(url.pathname)) {
       event.respondWith(fetch(req).catch(function () {
         return caches.open(AI_CACHE).then(function (c) { return c.match(req, { ignoreSearch: true }); })
           .then(function (hit) { return hit || new Response("", { status: 504 }); });
       }));
       return;
     }
-    event.respondWith(
-      caches.open(AI_CACHE).then(function (c) { return c.match(req, { ignoreSearch: true }); })
-        .then(function (hit) { return hit || fetch(req); })
-    );
+    event.respondWith(checkedCopy(req).then(function (hit) {
+      return hit || fetch(req).catch(function () { return new Response("", { status: 404 }); });
+    }));
     return;
   }
 

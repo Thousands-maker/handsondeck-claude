@@ -3,6 +3,13 @@
 
   "_how_to_swap": "Change \"model\" above to one of the ids below, commit, and the site rebuilds with that model. People who installed the old one are asked to download the new one; the old one is removed from their device.",
 
+  "pro": {
+    "enabled": true,
+    "repo": "mistralai/Ministral-3-3B-Instruct-2512-ONNX",
+    "dtype": "q4f16",
+    "_note": "Supercharged Pro: laptops and desktops only, about 2.7 GB, downloaded directly from this Hugging Face repository (users are told so). Set enabled to false to hide it."
+  },
+
   "_options": {
     "Qwen2.5-0.5B-Instruct-q4f16_1-MLC": "Alibaba Qwen (China) · Apache 2.0 · ~300-400 MB · phones and laptops",
     "SmolLM2-360M-Instruct-q4f16_1-MLC": "Hugging Face (France/US) · Apache 2.0, open training data · ~250 MB · phones and laptops, weakest",

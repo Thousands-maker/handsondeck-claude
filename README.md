@@ -113,13 +113,34 @@ On first visit the start screen asks how the app should run on this device:
     slide strip and counted separately by the content check until a person edits them,
     and Undo reverses the whole step.
 
+### Supercharged Pro — Ministral 3 3B, laptops and desktops
+
+A second, larger tier: **Ministral 3 3B Instruct** by Mistral AI (Apache 2.0), run through
+[Transformers.js](https://huggingface.co/docs/transformers.js) on the device's graphics
+processor, following Mistral's own published browser setup. It is about 2.7 GB (the
+browser version includes the model's image encoder, which can't be left out), needs a
+laptop or desktop with WebGPU and around 8 GB of memory, and is not offered on phones.
+
+Because it is far over GitHub Pages' 1 GB limit, **it is downloaded directly from
+Mistral AI's official Hugging Face repository, not from this site, and the screen says so
+before anyone downloads**: Hugging Face sees the device's internet address and that the
+model was downloaded, never anything typed. What this site publishes is
+`models/pro-manifest.json`, which pins the repository to one exact commit and lists every
+file with its SHA-256 — so each file is checked before use, and a file that changes
+upstream is rejected — plus the Transformers.js engine and ONNX Runtime files, so no code
+loads from a CDN. Set `"pro": { "enabled": false }` in `supercharged.json` to hide it.
+
+Both tiers can be installed side by side; the top bar shows which is in use, and each can
+be removed on its own.
+
 How it stays safe and offline:
 
 - **Same site only.** The model, its WebGPU runtime and the WebLLM engine are published on
   this site by the build workflow (below). The app never loads them from anywhere else.
-- **Checked before use.** `models/manifest.json` lists every file with its size and
-  SHA-256. The app downloads each file, checks it, and keeps it only if it matches; the
-  service worker then serves only checked copies to the model. A file that fails the check
+- **Checked before use.** Each tier's manifest lists every file with its size and
+  SHA-256. The app streams each file into storage while hashing it — so even a 2 GB file
+  is checked without being held in memory — and marks it checked only if it matches; the
+  service worker then hands the model nothing but checked copies. A file that fails the check
   is discarded and nothing is installed. Downloads can be paused, and resume where they
   stopped.
 - **Offline afterwards.** Once installed, it runs with no connection. Text is only handed
@@ -318,7 +339,9 @@ test should find out.
 index.html                     the app — one file, no build step
 sw.js                          service worker, precaches the shell, serves checked model files
 manifest.webmanifest           installable as a standalone app
-tools/prepare-model.mjs        build step: bundles the engine, fetches and fingerprints the model
+supercharged.json              which models Supercharged and Supercharged Pro use
+tools/prepare-model.mjs        build step: bundles WebLLM, fetches and fingerprints the Supercharged model
+tools/prepare-pro.mjs          build step: bundles Transformers.js, pins and fingerprints the Pro model
 .github/workflows/pages.yml    publishes the site and the optional model to GitHub Pages
 mcp/                           optional MCP server — off unless you start it
 docs/jtbd-and-user-stories.md  jobs-to-be-done and user stories with acceptance criteria
