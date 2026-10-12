@@ -52,12 +52,14 @@ function createDeckPlan(brief){
     else messages.push({ headline: text, support: [] });
   }
 
-  const slides = [{ type: "title", title: title || "Untitled briefing", subtitle: audience }];
+  const slides = [{ type: "title", title: title || "", subtitle: audience }];
   if (purpose) slides.push({ type: "context", title: "Why we are here", support: [purpose] });
   for (const m of messages) slides.push({ type: "point", title: m.headline, support: m.support });
-  slides.push({ type: "close", title: "The ask", support: [purpose || "Decision requested."] });
+  slides.push({ type: "close", title: "The ask", support: purpose ? [purpose] : [] });
 
   const warnings = [];
+  if (!title) warnings.push("No meeting name yet — ask for it before sending; it goes on the cover slide.");
+  if (!purpose) warnings.push("No ask yet — the closing slide is empty until you say what you need from the audience.");
   if (!messages.length) warnings.push("No key messages found.");
   for (const m of messages){
     if (m.headline.length > 120) warnings.push(`Headline too long for one slide: "${m.headline.slice(0,60)}…"`);
