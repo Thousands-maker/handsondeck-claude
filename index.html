@@ -100,7 +100,9 @@
   .card .go{margin-top:auto; padding-top:10px; font-weight:600; color:var(--primary); font-size:14px}
   .alt{display:flex; flex-wrap:wrap; gap:10px 22px; align-items:center; margin-top:26px;
     color:var(--muted); font-size:14px}
-  .how{margin-top:56px; display:grid; grid-template-columns:repeat(3,1fr); gap:16px;
+  .buildstamp{margin:28px 0 0; font-size:12px; color:var(--muted)}
+  .buildstamp:empty{display:none}
+  .how{margin-top:28px; display:grid; grid-template-columns:repeat(3,1fr); gap:16px;
     border-top:1px solid var(--rule); padding-top:28px}
   .how div{font-size:14px; color:var(--ink-2)}
   .how b{display:block; color:var(--ink); font-size:14px; margin-bottom:3px}
@@ -466,6 +468,7 @@
     <button type="button" class="linkbtn" id="btn-try-example">see a finished example first</button>
   </div>
 
+  <p class="buildstamp" id="buildstamp"></p>
   <div class="how">
     <div><span class="n">1</span><b>Tell it plainly</b>Who's in the room, what happened, what you need from them.</div>
     <div><span class="n">2</span><b>Get real slides</b>Every line on a slide traces back to something you wrote. Nothing is invented.</div>
@@ -3058,6 +3061,18 @@ loadManifests().then(function(ms){
   }
   paintModeChip();
 });
+
+/* Which build is this? Shown quietly on the start screen so anyone can tell whether
+   they are looking at the latest version. */
+if (location.protocol !== "file:"){
+  fetch("version.json", { cache: "no-store" }).then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(v){
+      if (!v) return;
+      var when = new Date(v.builtAt);
+      document.getElementById("buildstamp").textContent = "Version " + v.commit + " \u00B7 published " +
+        (isNaN(when) ? v.builtAt : when.toLocaleString([], { dateStyle: "medium", timeStyle: "short" }));
+    }).catch(function(){});
+}
 
 /* ---------- start screen and navigation ---------- */
 document.getElementById("path-guide").addEventListener("click", startGuide);

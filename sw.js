@@ -9,7 +9,7 @@
  * the cache in the background when a network happens to be available.
  */
 
-var VERSION = "handsondeck-v6";
+var VERSION = "handsondeck-v7";
 var SHELL = [
   "./",
   "./index.html",
@@ -82,6 +82,7 @@ self.addEventListener("fetch", function (event) {
     return;
   }
   if (url.origin !== self.location.origin) return;
+  if (/\/version\.json$/.test(url.pathname)) return;   // always ask the network which build is live
 
   // Model and engine files on this site: checked copies first, never copied into the app
   // cache (they are hundreds of MB). Manifests go to the network first so a new model is

@@ -52,6 +52,7 @@ jobs:
           cp index.html sw.js manifest.webmanifest icon.svg .nojekyll _site/
           node tools/prepare-model.mjs _site
           node tools/prepare-pro.mjs _site
+          echo "{\"commit\":\"${GITHUB_SHA::7}\",\"builtAt\":\"$(date -u +%Y-%m-%dT%H:%MZ)\"}" > _site/version.json
 
       - uses: actions/upload-pages-artifact@v3
         with:
