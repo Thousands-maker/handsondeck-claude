@@ -9,7 +9,7 @@
  * the cache in the background when a network happens to be available.
  */
 
-var VERSION = "handsondeck-v5";
+var VERSION = "handsondeck-v6";
 var SHELL = [
   "./",
   "./index.html",
@@ -100,6 +100,30 @@ self.addEventListener("fetch", function (event) {
     return;
   }
 
+  // The app page itself: network first, so an update shows on the next load, with the
+  // saved copy used when there is no connection (or the network is too slow to wait for).
+  if (req.mode === "navigate" || /\/(index\.html)?$/.test(url.pathname)) {
+    event.respondWith(new Promise(function (resolve) {
+      var settled = false;
+      function done(r) { if (!settled && r) { settled = true; resolve(r); } }
+      var timer = setTimeout(function () {
+        caches.match(req).then(function (c) { return c || caches.match("./index.html"); }).then(done);
+      }, 3500);
+      fetch(req).then(function (res) {
+        if (res && res.status === 200 && res.type === "basic") {
+          var copy = res.clone();
+          caches.open(VERSION).then(function (cache) { cache.put(req, copy); });
+        }
+        clearTimeout(timer); done(res);
+      }).catch(function () {
+        clearTimeout(timer);
+        caches.match(req).then(function (c) { return c || caches.match("./index.html"); })
+          .then(function (c) { done(c || new Response("Offline", { status: 503 })); });
+      });
+    }));
+    return;
+  }
+
   event.respondWith(
     caches.match(req).then(function (cached) {
       var fresh = fetch(req).then(function (res) {
@@ -112,7 +136,7 @@ self.addEventListener("fetch", function (event) {
         return cached || caches.match("./index.html");
       });
 
-      // Cache first so the app opens instantly and identically offline;
+      // Everything else: cache first so the app opens instantly and identically offline;
       // the network copy refreshes the cache for next time.
       return cached || fresh;
     })
