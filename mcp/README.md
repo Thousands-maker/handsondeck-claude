@@ -4,9 +4,16 @@
 the browser and never calls anything. Nothing in this folder runs unless you start it
 yourself, and deleting the folder changes nothing about the app.
 
-It is here as an option: when you want an AI assistant to work on a deck with you, you
-turn it on. When you do not, there is nothing running, nothing listening and nothing to
-switch off.
+It is here to let a **live AI model or an agentic AI agent** work on decks: a cloud
+assistant, an organisation's own internally hosted model, or an agent running a
+multi-step workflow (gather notes → draft → review → revise). It exposes the deck as
+tools over the Model Context Protocol, so whatever you connect works through the same
+structured slide plan the interface edits, and every change is traced back to the brief
+by the same content check. When you do not want that, there is nothing running, nothing
+listening and nothing to switch off.
+
+Unlike the app's on-device Supercharged tiers, what you send through this server goes
+to whichever model or agent you connect — that is your choice to make, per connection.
 
 That separation is the point. The app's own guarantee — that nothing leaves the browser
 — holds because the assistant integration is a separate process you start deliberately,

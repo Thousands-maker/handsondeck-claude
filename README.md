@@ -276,9 +276,23 @@ content, and that is the moment the content leaves the building.
 
 ## The MCP server — optional, off by default
 
-The app does not use it. HandsOnDeck runs entirely in the browser and never calls
-anything; [`mcp/`](mcp/) is a separate process you start only when you want an AI
-assistant working on a deck with you. Delete the folder and the app is unchanged.
+**What it is for:** connecting a live AI model, or an agentic AI agent, to HandsOnDeck.
+It exposes the deck as tools — create a plan from a brief, revise it, review it, preview
+it — so any MCP-capable assistant or agent can draft and refine decks through the same
+structured plan the interface edits, with the same content check. That might be a cloud
+assistant, an organisation's own internally hosted model, or an agent running a
+multi-step workflow (gather notes → draft the deck → review → revise).
+
+This is the third way to bring AI in, alongside the on-device tiers:
+
+| | Standard | Supercharged / Pro | MCP server |
+| --- | --- | --- | --- |
+| AI | none — keyword rules | small model on the device | any live model or agent you connect |
+| Where it runs | in the browser | in the browser | wherever that model or agent runs |
+| Content leaves the device | never | never | to whatever you connect, by your choice |
+
+The app itself does not use it: [`mcp/`](mcp/) is a separate process you start only when
+you want a model or agent working on decks. Delete the folder and the app is unchanged.
 
 That separation is deliberate. The guarantee that nothing leaves the browser holds
 because the assistant integration is something you turn on, not something baked in.

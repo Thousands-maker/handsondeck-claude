@@ -208,6 +208,14 @@
   .tier .facts{grid-template-columns:1fr 1fr; margin:0}
   .tier .secure{margin:0; font-size:13.5px; color:#0d3f44; line-height:1.5}
   .tier .secure.third{background:#fbf3e2; color:#5c3f00}
+  .aiex{background:var(--paper); border:1px solid var(--rule); border-radius:var(--radius-sm); padding:12px 14px}
+  .aiex h4{margin:0 0 8px; font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted)}
+  .aiex .ex{display:grid; gap:3px; font-size:13.5px; padding:8px 0; border-top:1px solid var(--rule)}
+  .aiex h4 + .ex{border-top:0; padding-top:0}
+  .aiex .ex-in{color:var(--ink-2); font-style:italic}
+  .aiex .ex-out{color:var(--ink)}
+  .aiex .ex-out::before{content:"\2192  "; color:var(--primary); font-weight:700; font-style:normal}
+  .aiex .ex-best{margin:8px 0 0; font-size:13px; font-weight:600; color:var(--primary)}
   .tieractions{display:flex; gap:8px; justify-content:flex-end; margin-top:auto; flex-wrap:wrap}
   .aiprogress{margin-top:16px}
   .aiprogress .bar{height:8px; background:var(--surface-2); border-radius:999px; overflow:hidden}
@@ -575,6 +583,14 @@
       <article class="tier" id="tier-super" data-tier="super">
         <header><h3>&#10022; Supercharged</h3><span class="tag">Phones &amp; laptops</span></header>
         <dl class="facts" data-role="facts"></dl>
+        <div class="aiex">
+          <h4>For example</h4>
+          <div class="ex"><span class="ex-in">&ldquo;Two analysts left in August.&rdquo;</span>
+            <span class="ex-out">puts it under <b>What's in the way</b></span></div>
+          <div class="ex"><span class="ex-in">&ldquo;The pilot that we ran in the north cut processing time from 9 days to 4 days&rdquo;</span>
+            <span class="ex-out">&ldquo;Pilot cut processing time from 9 days to 4&rdquo;</span></div>
+          <p class="ex-best">Best for short, clear notes.</p>
+        </div>
         <div class="secure">
           <b>Where it comes from:</b> downloaded once from <b data-role="origin">this site</b> over HTTPS &mdash;
           the same place as the app. Every file is checked against its SHA-256 fingerprint before use;
@@ -590,6 +606,14 @@
       <article class="tier" id="tier-pro" data-tier="pro">
         <header><h3>&#10022; Supercharged Pro</h3><span class="tag">Laptops &amp; desktops only</span></header>
         <dl class="facts" data-role="facts"></dl>
+        <div class="aiex">
+          <h4>For example</h4>
+          <div class="ex"><span class="ex-in">&ldquo;Complaints fell 20%, but only because fewer people could get through to us.&rdquo;</span>
+            <span class="ex-out">sees this is a problem, not good news &mdash; <b>What's in the way</b></span></div>
+          <div class="ex"><span class="ex-in">&ldquo;Despite the delays we saw in the second quarter, most divisions finished their migration on time and under budget&rdquo;</span>
+            <span class="ex-out">&ldquo;Most divisions finished migration on time, under budget&rdquo;</span></div>
+          <p class="ex-best">Best for long, messy emails and notes, where meaning depends on context.</p>
+        </div>
         <div class="secure third">
           <b>Where it comes from:</b> this model is downloaded <b>directly from Mistral AI's official page on
           Hugging Face</b> (<span data-role="source">huggingface.co</span>), <b>not from this site</b>. Hugging Face will
@@ -605,8 +629,9 @@
       </article>
     </div>
 
-    <p class="editnote">Either way: after the download it runs with no connection, and nothing you type
-      is ever sent anywhere.</p>
+    <p class="editnote">Examples are illustrative &mdash; both can still get things wrong, and anything
+      they change is marked &#10022; for you to check. Either way: after the download it runs with no
+      connection, and nothing you type is ever sent anywhere.</p>
 
     <div class="aiprogress" id="ai-progress" hidden>
       <div class="bar"><div class="fill" id="ai-fill"></div></div>
