@@ -200,6 +200,7 @@
   .tier{border:1px solid var(--rule); border-radius:var(--radius); padding:18px; display:flex; flex-direction:column;
     gap:12px; background:#fcfbfe}
   .tier.active{border-color:var(--primary); box-shadow:0 0 0 2px var(--primary)}
+  .tier.flash{box-shadow:0 0 0 3px var(--accent); transition:box-shadow .3s}
   .tier header{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
   .tier header h3{margin:0; font-size:17px}
   .tier header .tag{font-size:12px; font-weight:700; color:var(--primary); background:var(--primary-soft);
@@ -390,7 +391,7 @@
     <button type="button" id="crumb-guide">Guided</button>
     <button type="button" id="crumb-work">Brief &amp; deck</button>
   </nav>
-  <button type="button" class="modechip" id="mode-chip" title="Choose Standard or Supercharged">Standard</button>
+  <button type="button" class="modechip" id="mode-chip" title="Choose Standard, Supercharged or Supercharged Pro">Standard</button>
   <span class="pill" id="netpill" data-net="on" title="All generation runs in this browser. Nothing is sent anywhere.">
     <span class="dot"></span><span id="nettext">Ready &mdash; runs offline</span>
   </span>
@@ -410,7 +411,8 @@
       <span>You can change this any time from the top bar.</span></div>
     <div class="mc-opts">
       <button type="button" class="secondary" id="mc-standard">Standard &mdash; ready now</button>
-      <button type="button" id="mc-super">&#10022; Supercharged &mdash; <span id="mc-size">one-time download</span></button>
+      <button type="button" id="mc-super">&#10022; Supercharged &mdash; <span id="mc-size">small download</span></button>
+      <button type="button" id="mc-pro" hidden>&#10022; Supercharged Pro &mdash; <span id="mc-pro-size">large download</span>, laptops</button>
     </div>
   </div>
 
@@ -2494,11 +2496,17 @@ function paintAIScreen(){
   document.getElementById("ai-tip").hidden = !(tierInstalled("super") || tierInstalled("pro"));
 }
 
-function openAIScreen(){
+function openAIScreen(tier){
   aiError("");
   showScreen("ai");
   loadManifests().then(paintAIScreen);
   document.getElementById("ai-h").focus();
+  if (tier === "super" || tier === "pro"){
+    var card = document.getElementById("tier-" + tier);
+    card.classList.add("flash");
+    if (card.scrollIntoView) card.scrollIntoView({ block: "center" });
+    setTimeout(function(){ card.classList.remove("flash"); }, 1600);
+  }
 }
 
 /* Stream every file into storage while hashing it; mark it checked only if the fingerprint
@@ -2866,7 +2874,8 @@ function aiTightenHeadlines(fromChat){
 }
 
 document.getElementById("mode-chip").addEventListener("click", openAIScreen);
-document.getElementById("mc-super").addEventListener("click", openAIScreen);
+document.getElementById("mc-super").addEventListener("click", function(){ openAIScreen("super"); });
+document.getElementById("mc-pro").addEventListener("click", function(){ openAIScreen("pro"); });
 document.getElementById("mc-standard").addEventListener("click", function(){
   lsSet(LS_MODE, "standard"); paintModeChip();
   notify("Standard mode. Supercharged is in the top bar if you want it later.");
@@ -2895,10 +2904,11 @@ document.getElementById("g-sort-ai").addEventListener("click", aiSortFreeText);
 document.getElementById("btn-tighten").addEventListener("click", function(){ aiTightenHeadlines(false); });
 
 loadManifests().then(function(ms){
-  var parts = [];
-  if (ms[0]) parts.push(fmtMB(ms[0].totalBytes));
-  if (ms[1]) parts.push(fmtMB(ms[1].totalBytes) + " Pro");
-  if (parts.length) document.getElementById("mc-size").textContent = parts.join(" or ") + ", one-time download";
+  if (ms[0]) document.getElementById("mc-size").textContent = fmtMB(ms[0].totalBytes) + " download";
+  if (ms[1]){
+    document.getElementById("mc-pro-size").textContent = fmtMB(ms[1].totalBytes);
+    document.getElementById("mc-pro").hidden = false;
+  }
   paintModeChip();
 });
 

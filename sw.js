@@ -9,7 +9,7 @@
  * the cache in the background when a network happens to be available.
  */
 
-var VERSION = "handsondeck-v4";
+var VERSION = "handsondeck-v5";
 var SHELL = [
   "./",
   "./index.html",
