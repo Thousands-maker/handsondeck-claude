@@ -42,6 +42,15 @@ const require = createRequire(import.meta.url);
 
 function log(...a) { console.log("[prepare-model]", ...a); }
 
+// Surface failures as a build annotation, so the reason shows on the run's summary page.
+function fail(err) {
+  const msg = String((err && err.stack) || err).split("\n").slice(0, 3).join(" | ");
+  console.log(`::error title=Supercharged model build failed::${msg}`);
+  process.exit(1);
+}
+process.on("unhandledRejection", fail);
+process.on("uncaughtException", fail);
+
 async function sha256File(p) {
   const h = crypto.createHash("sha256");
   const fh = await fs.open(p);

@@ -17,11 +17,31 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
-import { createRequire } from "node:module";
+import { existsSync } from "node:fs";
 
 const SITE = path.resolve(process.argv[2] || "_site");
-const require = createRequire(import.meta.url);
 const log = (...a) => console.log("[prepare-pro]", ...a);
+
+// Pro is optional: if it can't be prepared, publish the site without it and say why in a
+// build annotation, rather than taking the whole site down.
+process.on("unhandledRejection", skip);
+process.on("uncaughtException", skip);
+function skip(err) {
+  const msg = String((err && err.stack) || err).split("\n").slice(0, 3).join(" | ").replace(/[\r\n]+/g, " ");
+  console.log(`::warning title=Supercharged Pro skipped::${msg}`);
+  process.exit(0);
+}
+
+// Find an installed package's folder without relying on its "exports" map, which may
+// not expose package.json.
+function pkgDir(name, from = []) {
+  const roots = [...from, process.cwd()];
+  for (const r of roots) {
+    const d = path.join(r, "node_modules", ...name.split("/"));
+    if (existsSync(path.join(d, "package.json"))) return d;
+  }
+  throw new Error(`Couldn't find ${name} in node_modules`);
+}
 
 const config = JSON.parse(await fs.readFile("supercharged.json", "utf8"));
 const pro = config.pro || {};
@@ -38,9 +58,8 @@ async function getJson(url) {
 }
 
 // ---- 1. engine and runtime, served from this site ----
-const tfPkgPath = require.resolve("@huggingface/transformers/package.json");
-const tfDir = path.dirname(tfPkgPath);
-const tfPkg = JSON.parse(await fs.readFile(tfPkgPath, "utf8"));
+const tfDir = pkgDir("@huggingface/transformers");
+const tfPkg = JSON.parse(await fs.readFile(path.join(tfDir, "package.json"), "utf8"));
 const candidates = ["transformers.web.min.js", "transformers.min.js", "transformers.web.js", "transformers.js"];
 let entry = null;
 for (const c of candidates) {
@@ -57,8 +76,7 @@ await esbuild.build({
   external: ["fs", "path", "url", "sharp", "onnxruntime-node", "node:*"],
 });
 
-const ortPkg = require.resolve("onnxruntime-web/package.json", { paths: [tfDir] });
-const ortDist = path.join(path.dirname(ortPkg), "dist");
+const ortDist = path.join(pkgDir("onnxruntime-web", [tfDir]), "dist");
 const ortOut = path.join(SITE, "vendor", "ort");
 await fs.mkdir(ortOut, { recursive: true });
 const localFiles = [];
