@@ -2329,7 +2329,7 @@ for (var cr = 0; cr < chipRows.length; cr++){
    Keyword rules, no model. It splits, sorts and places the person's own sentences and
    never rewrites them, so every line on a slide still traces back to what they typed. */
 var KINDS = {
-  happened: { q: "What happened", label: "What happened" },
+  happened: { q: "What's happening", label: "What's happening" },
   why:      { q: "Why it matters", label: "Why it matters" },
   block:    { q: "What is in the way", label: "In the way" },
   next:     { q: "What happens next", label: "Next" }
@@ -2362,7 +2362,7 @@ function splitSentences(text){
         var rest = line.slice(i + 1).replace(/^\s+/, "");
         var lastWord = (buf.match(/(\S+)$/) || [""])[0].toLowerCase();
         if (/^(e\.g\.|i\.e\.|etc\.|vs\.|approx\.|mr\.|ms\.|mrs\.|dr\.|no\.|st\.)$/.test(lastWord)) continue;
-        if (!rest || /^["'“(]?[A-Z0-9]/.test(rest)){
+        if (!rest || /^["'“(]?[A-Za-z0-9]/.test(rest)){
           if (buf.trim()) out.push(buf.trim());
           buf = "";
         }
@@ -2374,7 +2374,26 @@ function splitSentences(text){
 }
 
 function tidySentence(s){
-  return s.replace(/\s+/g, " ").replace(/[.;:,]+$/, "").trim();
+  s = s.replace(/\s+/g, " ").replace(/[.;:,]+$/, "").trim();
+  /* Display tidying only: a capital to start, and "i" as "I". The content check compares
+     without case, so this never counts as changing the person's words. */
+  s = s.replace(/(^|\s)i(?=\s|'|\u2019|$)/g, "$1I");
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/* A long run-on sentence becomes separate points where it joins two thoughts
+   (", and …", ", but …", "; …"), keeping each part in the person's own words. */
+function splitClauses(s){
+  if (s.split(" ").length < 16) return [s];
+  var parts = s.split(/\s*(?:;|,\s*(?=(?:and|but|so|while|whereas|however)\b))\s*/i);
+  var out = [];
+  parts.forEach(function(p){
+    p = p.replace(/^(and|so)\s+/i, "").trim();
+    if (!p) return;
+    if (out.length && p.split(" ").length < 4) out[out.length - 1] += ", " + p;
+    else out.push(p);
+  });
+  return out.length > 1 ? out : [s];
 }
 function isEvidence(s){
   return /\d/.test(s) || /^(e\.g\.|for example|for instance|including|such as)/i.test(s);
@@ -2393,8 +2412,14 @@ function keywordKind(s){
 
 /* classify: optional function(sentence) -> kind, used by the on-device model when present */
 function sortFreeText(text, haveAsk, classify){
-  var sentences = splitSentences(text).map(tidySentence).filter(function(s){ return s && !isFiller(s); });
-  var groups = { happened: [], why: [], block: [], next: [] }, asks = [], last = null;
+  var sentences = [];
+  splitSentences(text).forEach(function(s){
+    splitClauses(s.replace(/[.;:,]+$/, "")).forEach(function(c){
+      c = tidySentence(c);
+      if (c && !isFiller(c)) sentences.push(c);
+    });
+  });
+  var groups = { happened: [], why: [], block: [], next: [] }, asks = [], last = null, ordered = [];
   sentences.forEach(function(s, idx){
     var kind = classify ? classify(s, idx) : keywordKind(s);
     var ev = isEvidence(s);
@@ -2405,23 +2430,22 @@ function sortFreeText(text, haveAsk, classify){
       if (!haveAsk && !asks.length){ asks.push(s); last = "ask"; return; }
       kind = "next";
     }
+    /* The opening point sets the scene: a plan or change mentioned first is "what's happening". */
+    if (!ordered.length && kind === "next" && !classify) kind = "happened";
     groups[kind].push({ text: s, evidence: ev });
+    ordered.push({ text: s, evidence: ev, kind: kind });
     last = kind;
   });
 
-  var out = [];
-  KIND_ORDER.forEach(function(kind){
-    var point = null;
-    groups[kind].forEach(function(item){
-      var startNew = !point || (!item.evidence && point.details.length > 0) ||
-        (!item.evidence && !point.headlineIsClaim) || point.details.length >= 5;
-      if (startNew){
-        point = { kind: kind, headline: item.text, details: [], headlineIsClaim: !item.evidence };
-        out.push(point);
-      } else {
-        point.details.push(item.text);
-      }
-    });
+  /* Points stay in the order the person wrote them: each statement starts a slide, and the
+     numbers or examples that follow it become its bullet points. */
+  var out = [], point = null;
+  ordered.forEach(function(item){
+    var attach = point && item.evidence && point.details.length < 5 &&
+      (item.kind === point.kind || !CUES.block.test(item.text));
+    if (attach){ point.details.push(item.text); return; }
+    point = { kind: item.kind, headline: item.text, details: [] };
+    out.push(point);
   });
   return {
     beats: out.map(function(p){ return { kind: p.kind, headline: p.headline, detail: p.details.join("\n") }; }),
