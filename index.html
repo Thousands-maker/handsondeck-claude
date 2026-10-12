@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Turn a plain-language brief into real HTML slides. Runs entirely in the browser, with no network calls and no model in the loop.">
+<meta name="description" content="Turn a plain-language brief into real HTML slides. Runs entirely in the browser and works offline, with an optional on-device AI.">
 <meta name="theme-color" content="#4b2e83">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
@@ -156,7 +156,52 @@
   .review ol ul{margin:2px 0 4px; padding-left:16px; color:var(--ink-2); font-size:13.5px}
   .outline-note{margin-top:16px; font-size:14px; color:var(--ink-2); background:var(--accent-soft);
     border-radius:var(--radius-sm); padding:11px 14px}
-  .stepnav{display:flex; align-items:center; gap:10px; margin-top:26px}
+  .modeswitch{display:inline-flex; background:var(--surface-2); border-radius:999px; padding:4px; gap:2px;
+    margin-bottom:18px; flex-wrap:wrap}
+  .modeswitch button{background:transparent; border:0; color:var(--ink-2); border-radius:999px;
+    padding:7px 14px; font-size:13.5px}
+  .modeswitch button:hover{background:rgba(255,255,255,.6); color:var(--ink)}
+  .modeswitch button[aria-selected=true]{background:var(--paper); color:var(--primary);
+    box-shadow:0 1px 3px rgba(22,23,29,.12)}
+  #g-freetext{min-height:200px}
+  .freeactions{display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-top:12px}
+  .sortnote{font-size:13.5px; color:var(--ink-2)}
+  .sorted-banner{background:var(--accent-soft); color:#0d5157; border-radius:var(--radius-sm);
+    padding:10px 14px; font-size:14px; margin-bottom:14px}
+  .beat .from{font-size:12px; color:var(--muted); margin-left:auto; font-weight:500}
+  .modechip{background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.3); color:#fff;
+    margin-left:auto; font-size:12.5px; padding:5px 12px; border-radius:999px}
+  .modechip:hover{background:rgba(255,255,255,.22)}
+  .modechip.on{background:#fff; color:var(--primary); border-color:#fff}
+  .modechip + .pill{margin-left:0}
+  .modechoice{display:flex; flex-wrap:wrap; align-items:center; gap:12px 20px; background:var(--paper);
+    border:1px solid #cbbfe3; border-radius:var(--radius); padding:14px 16px; margin:-10px 0 22px; box-shadow:var(--shadow)}
+  .modechoice .mc-text{flex:1 1 260px; font-size:14px; color:var(--ink-2)}
+  .modechoice .mc-text b{display:block; color:var(--ink)}
+  .modechoice .mc-opts{display:flex; gap:8px; flex-wrap:wrap}
+  .aiscreen h3{font-size:15px; margin:0 0 8px}
+  .aigrid{display:grid; grid-template-columns:1fr 1fr; gap:20px; margin:4px 0 18px}
+  .aigrid ul{margin:0; padding-left:20px; font-size:14.5px; color:var(--ink-2)}
+  .aigrid li{margin-bottom:6px}
+  .secure{background:var(--accent-soft); border-radius:var(--radius-sm); padding:14px 16px; margin-bottom:16px}
+  .secure p{margin:0; font-size:14px; color:#0d3f44}
+  .facts{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:0 0 14px}
+  .facts:empty{display:none}
+  .facts div{background:#fcfbfe; border:1px solid var(--rule); border-radius:var(--radius-sm); padding:10px 12px}
+  .facts dt{font-size:12px; color:var(--muted); font-weight:600}
+  .facts dd{margin:2px 0 0; font-size:15px; font-weight:650}
+  .checks{list-style:none; margin:0; padding:0; font-size:14px}
+  .checks li{display:flex; gap:9px; align-items:baseline; padding:3px 0; color:var(--ink-2)}
+  .checks li::before{content:"\2713"; color:var(--accent); font-weight:700; flex:none}
+  .checks li.no::before{content:"\2715"; color:var(--bad)}
+  .checks li.warn::before{content:"!"; color:var(--warn)}
+  .aiprogress{margin-top:16px}
+  .aiprogress .bar{height:8px; background:var(--surface-2); border-radius:999px; overflow:hidden}
+  .aiprogress .fill{height:100%; width:0; background:var(--primary); transition:width .2s}
+  .aiprogress p{font-size:13.5px; color:var(--ink-2); margin:8px 0 0; font-variant-numeric:tabular-nums}
+  .check.ai{background:#fbf3e2; color:#6d4a00}
+  .check.ai::before{background:#d39b1b}
+  .stepnav{display:flex; align-items:center; gap:10px; margin-top:26px; flex-wrap:wrap}
   .stepnav .spacer{flex:1}
   .field-error{color:var(--bad); font-size:13.5px; margin-top:8px}
   .guide-foot{display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-top:16px;
@@ -181,6 +226,14 @@
   .sync{margin-top:12px; font-size:13px; padding:9px 12px; border-radius:var(--radius-sm);
     background:var(--accent-soft); color:#0d5157; display:none}
   .sync.on{display:block}
+  .logorow{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+  .logorow select{flex:1 1 140px; width:auto}
+  .logoprev{flex:none; width:84px; height:40px; border:2px dashed var(--rule-strong); border-radius:6px;
+    display:grid; place-items:center; font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--muted); overflow:hidden; background:#fff}
+  .logoprev.img{border-style:solid; border-color:var(--rule)}
+  .logoprev img{max-width:76px; max-height:32px; object-fit:contain}
+  .logoprev.none{opacity:.4; text-decoration:line-through}
   details.more{margin-top:16px; font-size:13.5px; color:var(--ink-2)}
   details.more summary{cursor:pointer; color:var(--primary); font-weight:600}
   details.more p{margin:8px 0 0}
@@ -270,6 +323,15 @@
   #stage .slide:not(.title) h3{border-left:5px solid var(--saccent); padding-left:16px}
   #stage .sub{font-size:var(--sbody); opacity:.85; margin:0}
   #stage .slide.title{position:relative}
+  #stage .slide{position:relative}
+  #stage .logo{position:absolute; top:40px; right:56px; height:52px; max-width:200px; object-fit:contain}
+  #stage .slide.title .logo{left:92px; right:auto; top:56px; height:68px; background:#fff; padding:8px 12px; border-radius:8px}
+  #stage .logo.ph{display:flex; align-items:center; justify-content:center; width:150px; padding:0;
+    border:2px dashed #b9bcc6; color:#8a8f9b; font-size:15px; font-weight:600; letter-spacing:.08em;
+    text-transform:uppercase; border-radius:6px; background:transparent}
+  #stage .slide.title .logo.ph{border-color:rgba(255,255,255,.6); color:rgba(255,255,255,.85); background:transparent}
+  #stage .pgno{position:absolute; bottom:32px; right:56px; margin:0; font-size:18px; color:#8a8f9b;
+    font-variant-numeric:tabular-nums}
   #stage .vtag{position:absolute; top:64px; right:92px; margin:0; font-size:22px;
     letter-spacing:.08em; text-transform:uppercase; opacity:.7}
   #stage ul{margin:0; padding-left:22px}
@@ -294,7 +356,9 @@
     .guide{padding:22px 16px 48px}
     .step{padding:22px 18px}
     .step h2{font-size:22px}
-    .styles{grid-template-columns:1fr}
+    .styles, .aigrid, .facts{grid-template-columns:1fr}
+    .modechip{font-size:11.5px; padding:4px 9px}
+    .pill #nettext{display:none}
     .review .row{grid-template-columns:1fr auto}
     .review dt{grid-column:1 / -1}
     .wrap{padding:12px; gap:12px}
@@ -313,6 +377,7 @@
     <button type="button" id="crumb-guide">Guided</button>
     <button type="button" id="crumb-work">Brief &amp; deck</button>
   </nav>
+  <button type="button" class="modechip" id="mode-chip" title="Choose Standard or Supercharged">Standard</button>
   <span class="pill" id="netpill" data-net="on" title="All generation runs in this browser. Nothing is sent anywhere.">
     <span class="dot"></span><span id="nettext">Ready &mdash; runs offline</span>
   </span>
@@ -326,6 +391,15 @@
   <h1>Turn what you know into a deck.</h1>
   <p class="lede">Type it the way you'd say it. HandsOnDeck shapes your words into clean,
     editable slides — ready to present, download or send for edits.</p>
+
+  <div class="modechoice" id="mode-choice" hidden>
+    <div class="mc-text"><b>First time here? Choose how it runs on this device.</b>
+      <span>You can change this any time from the top bar.</span></div>
+    <div class="mc-opts">
+      <button type="button" class="secondary" id="mc-standard">Standard &mdash; ready now</button>
+      <button type="button" id="mc-super">&#10022; Supercharged &mdash; <span id="mc-size">one-time download</span></button>
+    </div>
+  </div>
 
   <div class="paths">
     <button type="button" class="card recommended" id="path-guide">
@@ -395,8 +469,28 @@
     <h2 tabindex="-1">What happened?</h2>
     <p class="why">Tell it the way you'd tell a colleague. Each answer becomes one slide, and the
       details underneath become its bullet points. Only the first is required.</p>
+
+    <div class="modeswitch" role="tablist" aria-label="How to answer">
+      <button type="button" role="tab" id="g-mode-free" aria-selected="true">Just tell me what happened</button>
+      <button type="button" role="tab" id="g-mode-prompts" aria-selected="false">Point by point</button>
+    </div>
+
+    <div id="g-free">
+      <label class="field" for="g-freetext">In your own words
+        <span class="hint">Paste an email, notes, or just type. Full sentences work best.</span></label>
+      <textarea id="g-freetext" rows="9" placeholder="e.g. Since March the backlog has doubled, from 210 to 430 open cases. The median wait is now 19 days. This matters because complaints have tripled. But the current team can't absorb it, and two analysts left in August. We plan to clear the oldest cases first by December. We need approval to hire two more analysts."></textarea>
+      <div class="freeactions">
+        <button type="button" id="g-sort">Sort it into slides</button>
+        <button type="button" class="secondary ai-only" id="g-sort-ai" hidden>&#10022; Sort with on-device AI</button>
+        <span class="sortnote" id="g-sort-note" role="status"></span>
+      </div>
+    </div>
+
+    <div id="g-prompts" hidden>
+    <div class="sorted-banner" id="g-sorted-banner" hidden></div>
     <div id="g-beats"></div>
     <button type="button" class="secondary" id="g-add-beat">+ Add another point</button>
+    </div>
     <p class="field-error" id="g-beats-error" hidden>Add at least one point — what happened, in a sentence.</p>
   </section>
 
@@ -436,6 +530,62 @@
   </div>
 </main>
 
+<!-- ================= supercharged ================= -->
+<main id="screen-ai" class="guide" hidden>
+  <section class="step aiscreen">
+    <div class="eyebrow">Optional</div>
+    <h2 tabindex="-1" id="ai-h">&#10022; Supercharged mode</h2>
+    <p class="why">Adds a small AI model that runs on this device. It helps with the parts rules
+      can't do well, and still works with no internet once it's downloaded.</p>
+
+    <div class="aigrid">
+      <div>
+        <h3>What it adds</h3>
+        <ul class="ticks">
+          <li><b>Smarter sorting.</b> Reads each sentence you write and decides which slide it belongs on.</li>
+          <li><b>Tighter headlines.</b> Shortens long headlines to ten words or fewer, keeping every number you wrote.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>What it won't do</h3>
+        <ul class="limits">
+          <li>Write your deck for you, or add facts you didn't give it.</li>
+          <li>Match a cloud AI &mdash; it's small, so it can misjudge, and it's slower on phones.</li>
+          <li>Hide what it changed &mdash; anything it rewords is marked &#10022; so you can check it.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="secure">
+      <h3>Safe and contained</h3>
+      <p>Downloaded once from <b id="ai-origin">this site</b>, over HTTPS &mdash; the same place as the app,
+        with no third parties. Every file is checked against its published SHA-256 fingerprint before it is
+        used, and anything that doesn't match is thrown away. After that it runs with no connection, and
+        nothing you type is ever sent anywhere.</p>
+    </div>
+
+    <dl class="facts" id="ai-facts"></dl>
+    <ul class="checks" id="ai-checks" aria-live="polite"></ul>
+
+    <div class="aiprogress" id="ai-progress" hidden>
+      <div class="bar"><div class="fill" id="ai-fill"></div></div>
+      <p id="ai-ptext" role="status"></p>
+    </div>
+    <p class="field-error" id="ai-error" hidden></p>
+
+    <div class="stepnav">
+      <button type="button" class="secondary" id="ai-back">Back</button>
+      <span class="spacer"></span>
+      <button type="button" class="danger" id="ai-remove" hidden>Remove from this device</button>
+      <button type="button" class="secondary" id="ai-cancel" hidden>Pause download</button>
+      <button type="button" class="secondary" id="ai-standard">Use Standard</button>
+      <button type="button" class="big" id="ai-download" disabled>Checking this device&hellip;</button>
+    </div>
+    <p class="editnote" id="ai-tip" hidden>Tip: add HandsOnDeck to your home screen (Share &rarr; Add to Home Screen on iPhone,
+      or Install app in Chrome). Browsers keep an installed app's downloads much longer.</p>
+  </section>
+</main>
+
 <!-- ================= workspace ================= -->
 <div id="screen-work" class="wrap" hidden>
 
@@ -469,6 +619,20 @@
       <option value="workshop">Workshop — conversational</option>
     </select>
 
+    <label class="field" for="f-logo">Logo</label>
+    <div class="logorow">
+      <span class="logoprev" id="logo-prev" aria-hidden="true">Your logo</span>
+      <select id="f-logo">
+        <option value="placeholder">Placeholder</option>
+        <option value="image" disabled>Uploaded logo</option>
+        <option value="none">No logo</option>
+      </select>
+      <label class="filebtn" for="f-logo-file" tabindex="0" role="button">Upload logo</label>
+      <input type="file" id="f-logo-file" accept="image/png,image/jpeg,image/webp,image/svg+xml" class="vh" tabindex="-1">
+    </div>
+    <span class="hint">PNG, JPG, SVG or WebP up to 500 KB. It stays in this browser and inside the files you export.
+      Every slide except the title gets a page number.</span>
+
     <div class="warnings" id="warnings"></div>
     <div class="sync" id="sync-note">Your slide edits are written back into this brief, so regenerating keeps them.</div>
 
@@ -496,6 +660,7 @@
       </div>
       <span class="spacer"></span>
       <div class="exports">
+        <button id="btn-tighten" class="secondary ai-only" hidden disabled>&#10022; Tighten headlines</button>
         <button id="btn-download" class="secondary" disabled>Download HTML</button>
         <button id="btn-share" disabled>Send for editing</button>
       </div>
@@ -640,6 +805,7 @@ function buildPlan(){
 
   return {
     meta:{ title:title, purpose:purpose, audience:audience, style:style,
+           logo:{ mode:logoState.mode, src: logoState.mode === "image" ? logoState.src : "" },
            version:version, generated:new Date().toISOString(),
            contentCheck:{ tracedToBrief:traced, templateLabels:templated, notTraced:untraced } },
     slides: slides,
@@ -667,12 +833,71 @@ function slideMarkup(p, editable){
     }
     var tag = (s.type === "title" && p.meta.version)
       ? '<p class="vtag">Version ' + p.meta.version + '</p>' : "";
+    tag += logoMarkup(p.meta.logo);
+    if (s.type !== "title") tag += '<p class="pgno">' + (i + 1) + '</p>';
     out.push('<section class="slide ' + s.type + '" data-i="' + i + '">' + tag +
       '<h3 data-slide="' + i + '" data-field="title"' + ed + '>' + esc(s.title) + '</h3>' +
       body + '</section>');
   }
   return out.join("");
 }
+
+/* ---------- logo and page numbers ----------
+   A neutral placeholder by default; the person can upload their own logo, which is kept
+   as a data URL inside the slide plan so it travels with every exported file. */
+var LOGO_RE = /^data:image\/(png|jpeg|webp|gif|svg\+xml);base64,[A-Za-z0-9+\/=]+$/;
+var logoState = { mode: "placeholder", src: "" };
+
+function logoMarkup(logo){
+  logo = logo || { mode: "placeholder" };
+  if (logo.mode === "none") return "";
+  if (logo.mode === "image" && LOGO_RE.test(logo.src || "")) return '<img class="logo" alt="Logo" src="' + logo.src + '">';
+  return '<div class="logo ph">Your logo</div>';
+}
+
+function paintLogoControls(){
+  var sel = document.getElementById("f-logo");
+  var hasImg = !!(logoState.src && LOGO_RE.test(logoState.src));
+  sel.querySelector('option[value="image"]').disabled = !hasImg;
+  sel.value = logoState.mode;
+  var prev = document.getElementById("logo-prev");
+  prev.className = "logoprev" + (logoState.mode === "image" ? " img" : logoState.mode === "none" ? " none" : "");
+  prev.innerHTML = "";
+  if (logoState.mode === "image" && hasImg){
+    var im = document.createElement("img"); im.alt = ""; im.src = logoState.src; prev.appendChild(im);
+  } else {
+    prev.textContent = "Your logo";
+  }
+}
+
+function setLogo(mode, src){
+  if (typeof src === "string") logoState.src = src;
+  logoState.mode = mode;
+  paintLogoControls();
+  if (plan){
+    plan.meta.logo = { mode: logoState.mode, src: logoState.mode === "image" ? logoState.src : "" };
+    renderDeck(current);
+    refreshPlanView();
+  }
+}
+
+document.getElementById("f-logo").addEventListener("change", function(e){ setLogo(e.target.value); });
+document.getElementById("f-logo-file").addEventListener("change", function(e){
+  var f = e.target.files && e.target.files[0];
+  e.target.value = "";
+  if (!f) return;
+  if (f.size > 500 * 1024){ notify("That image is over 500 KB. Use a smaller logo file."); return; }
+  if (!/^image\/(png|jpeg|webp|svg\+xml)$/.test(f.type)){ notify("Use a PNG, JPG, SVG or WebP image."); return; }
+  var r = new FileReader();
+  r.onload = function(){
+    var src = String(r.result || "");
+    if (!LOGO_RE.test(src)){ notify("That image couldn't be used as a logo."); return; }
+    setLogo("image", src);
+    notify("Logo added to every slide.");
+  };
+  r.onerror = function(){ notify("That image couldn't be read."); };
+  r.readAsDataURL(f);
+});
 
 function applyStageStyle(style){
   var st = STYLES[style] || STYLES.operational;
@@ -725,7 +950,9 @@ function renderStrip(){
     b.className = s.type;
     b.setAttribute("aria-label", "Slide " + (i + 1) + ": " + s.title);
     var n = document.createElement("span"); n.className = "sn"; n.textContent = String(i + 1);
-    var t = document.createElement("span"); t.className = "st"; t.textContent = s.title;
+    var t = document.createElement("span"); t.className = "st";
+    var isAI = (plan.meta.aiReworded || []).indexOf(s.title) !== -1;
+    t.textContent = (isAI ? "\u2726 " : "") + s.title;
     b.appendChild(n); b.appendChild(t);
     (function(idx){ b.addEventListener("click", function(){ showSlide(idx); }); })(i);
     strip.appendChild(b);
@@ -753,13 +980,18 @@ function standaloneDoc(p){
     ".slide.title{background:" + st.accent + ";color:#fff}",
     ".slide:not(.title) h3{border-left:5px solid " + st.accent + ";padding-left:16px}",
     ".sub{font-size:" + st.body + ";opacity:.85;margin:0}",
-    ".slide.title{position:relative}",
+    ".slide{position:relative}",
+    ".logo{position:absolute;top:5.5vh;right:4.4vw;height:7.2vh;max-width:16vw;object-fit:contain}",
+    ".slide.title .logo{left:7%;right:auto;top:7.8vh;height:9.4vh;background:#fff;padding:1vh 1vw;border-radius:8px}",
+    ".logo.ph{display:flex;align-items:center;justify-content:center;width:12vw;padding:0;border:2px dashed #b9bcc6;color:#8a8f9b;font-size:1.6vh;font-weight:600;letter-spacing:.08em;text-transform:uppercase;border-radius:6px;background:transparent}",
+    ".slide.title .logo.ph{border-color:rgba(255,255,255,.6);color:rgba(255,255,255,.85);background:transparent}",
+    ".pgno{position:absolute;bottom:4.4vh;right:4.4vw;margin:0;font-size:2.4vh;color:#8a8f9b}",
     ".vtag{position:absolute;top:6%;right:7%;margin:0;font-size:" +
       (parseInt(st.body,10) * 0.7) + "px;letter-spacing:.08em;text-transform:uppercase;opacity:.7}",
     "ul{margin:0;padding-left:22px}",
     "li{font-size:" + st.body + ";line-height:" + st.lead + ";margin-bottom:" + st.gap +
       ";max-width:52ch}",
-    ".nav{position:fixed;bottom:18px;right:22px;font-size:14px;color:#666}",
+    ".nav{position:fixed;bottom:18px;left:22px;font-size:13px;color:#999}",
     "@page{size:A4 landscape;margin:0}",
     "@media print{.nav{display:none}",
     ".slide{display:flex!important;height:100vh;page-break-after:always;break-after:page}",
@@ -811,22 +1043,28 @@ function recheckContent(){
   if (!plan) return;
   var sourceText = [plan.meta.title, plan.meta.purpose, plan.meta.audience,
     document.getElementById("f-messages").value].join("\n").toLowerCase();
-  var traced = 0, untraced = [], templated = 0;
+  var traced = 0, untraced = [], templated = 0, aiCount = 0;
+  var ai = plan.meta.aiReworded || [];
   for (var i = 0; i < plan.slides.length; i++){
     var s = plan.slides[i], vals = [s.title, s.subtitle].concat(s.support || []);
     for (var v = 0; v < vals.length; v++){
       var str = vals[v];
       if (!str) continue;
       if (TEMPLATE_LABELS.indexOf(str) !== -1){ templated += 1; continue; }
+      if (ai.indexOf(str) !== -1){ aiCount += 1; continue; }
       if (sourceText.indexOf(String(str).toLowerCase()) !== -1) traced += 1;
       else untraced.push(str);
     }
   }
-  plan.meta.contentCheck = { tracedToBrief:traced, templateLabels:templated, notTraced:untraced };
+  plan.meta.contentCheck = { tracedToBrief:traced, templateLabels:templated, notTraced:untraced,
+    rewordedByOnDeviceAI:aiCount };
 }
 
 function refreshPlanView(){
-  document.getElementById("planout").textContent = JSON.stringify(plan, null, 2);
+  document.getElementById("planout").textContent = JSON.stringify(plan, function(k, v){
+    return (k === "src" && typeof v === "string" && v.length > 120)
+      ? "(embedded image, " + Math.round(v.length * 0.75 / 1024) + " KB)" : v;
+  }, 2);
 }
 
 function refreshWarnings(){
@@ -845,12 +1083,17 @@ function refreshContentCheck(){
   var box = document.getElementById("content-check");
   if (!plan || !plan.meta.contentCheck){ box.textContent = ""; return; }
   var cc = plan.meta.contentCheck;
-  box.className = "check " + (cc.notTraced.length ? "bad" : "good");
+  var aiN = cc.rewordedByOnDeviceAI || 0;
+  box.className = "check " + (cc.notTraced.length ? "bad" : (aiN ? "ai" : "good"));
+  var aiText = aiN ? " " + aiN + (aiN === 1 ? " headline was" : " headlines were") +
+    " shortened by the on-device AI and marked \u2726 \u2014 check them." : "";
   box.textContent = cc.notTraced.length
-    ? "Content check: " + cc.notTraced.length + " item(s) do not trace back to your brief."
-    : "Content check: all " + cc.tracedToBrief +
-      " content items trace back to your brief. Nothing was invented. (" +
-      cc.templateLabels + " template labels.)";
+    ? "Content check: " + cc.notTraced.length + " item(s) do not trace back to your brief." + aiText
+    : (aiN
+      ? "Content check: " + cc.tracedToBrief + " items are your own words." + aiText
+      : "Content check: all " + cc.tracedToBrief +
+        " content items trace back to your brief. Nothing was invented. (" +
+        cc.templateLabels + " template labels.)");
 }
 
 /* ---------- conversational refinement ----------
@@ -970,6 +1213,15 @@ function handleChat(raw){
     return;
   }
 
+  if (/^(tighten|shorten)( the)? headlines?/.test(t)){
+    if (!aiReady()){
+      say("HandsOnDeck", "Tightening headlines needs Supercharged mode — set it up from the ✦ button in the top bar.", true);
+      return;
+    }
+    aiTightenHeadlines(true);
+    return;
+  }
+
   if (/^(help|what can you do)/.test(t)){
     say("HandsOnDeck", "I can cut the deck to a length, delete a slide, change a headline, add a supporting point, change style, make the ask explicit, or undo. Everything I do writes to the slide plan and back into your brief.");
     return;
@@ -1018,8 +1270,14 @@ function generate(){
   document.getElementById("notice").hidden = true;
   snapshot();
   version += 1;
+  var prevAI = (plan && plan.meta && plan.meta.aiReworded) || [];
   var t0 = (window.performance && performance.now) ? performance.now() : Date.now();
   plan = buildPlan();
+  /* Headlines the on-device AI shortened stay marked until a person rewrites them. */
+  plan.meta.aiReworded = prevAI.filter(function(t){
+    return plan.slides.some(function(sl){ return sl.title === t; });
+  });
+  recheckContent();
   var t1 = (window.performance && performance.now) ? performance.now() : Date.now();
   clearEdited();
   document.getElementById("deck-empty").hidden = true;
@@ -1034,6 +1292,7 @@ function generate(){
     "v" + version + " \u00B7 built in " + Math.max(1, Math.round(t1 - t0)) + " ms";
   document.getElementById("btn-generate").textContent = "Update deck";
   selectTab("deck");
+  paintModeChip();
 }
 
 function deleteSlide(){
@@ -1095,6 +1354,10 @@ document.addEventListener("focusout", function(e){
   snapshot();
   if (field === "support") slide.support[+idx] = value;
   else slide[field] = value;
+  if (plan.meta.aiReworded){
+    var at = plan.meta.aiReworded.indexOf(before);
+    if (at !== -1) plan.meta.aiReworded.splice(at, 1);
+  }
   syncFormFromPlan();
   recheckContent();
   refreshPlanView();
@@ -1174,6 +1437,12 @@ function editableDoc(p){
     ".slide:not(.title) h3{border-left:5px solid " + st.accent + ";padding-left:16px}",
     ".sub{font-size:" + st.body + ";opacity:.85;margin:0}",
     ".vtag{position:absolute;top:64px;right:92px;margin:0;font-size:22px;letter-spacing:.08em;text-transform:uppercase;opacity:.7}",
+    ".slide{position:relative}",
+    ".logo{position:absolute;top:40px;right:56px;height:52px;max-width:200px;object-fit:contain}",
+    ".slide.title .logo{left:92px;right:auto;top:56px;height:68px;background:#fff;padding:8px 12px;border-radius:8px}",
+    ".logo.ph{display:flex;align-items:center;justify-content:center;width:150px;padding:0;border:2px dashed #b9bcc6;color:#8a8f9b;font-size:15px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;border-radius:6px;background:transparent}",
+    ".slide.title .logo.ph{border-color:rgba(255,255,255,.6);color:rgba(255,255,255,.85);background:transparent}",
+    ".pgno{position:absolute;bottom:32px;right:56px;margin:0;font-size:18px;color:#8a8f9b}",
     "ul{margin:0;padding-left:22px}",
     "li{font-size:" + st.body + ";line-height:" + st.lead + ";margin-bottom:" + st.gap + ";max-width:52ch}",
     "[contenteditable]:focus{outline:2px solid #00a3ad;outline-offset:3px;border-radius:2px}",
@@ -1193,12 +1462,16 @@ function editableDoc(p){
     "var plan=JSON.parse(document.getElementById('plan').textContent);",
     "var i=0;",
     "function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}",
+    "function L(){var g=plan.meta.logo||{mode:'placeholder'};if(g.mode==='none')return '';",
+    "if(g.mode==='image'&&/^data:image\\/(png|jpeg|webp|gif|svg\\+xml);base64,[A-Za-z0-9+\\/=]+$/.test(g.src||''))return '<img class=\"logo\" alt=\"Logo\" src=\"'+g.src+'\">';",
+    "return '<div class=\"logo ph\">Your logo</div>';}",
     "function draw(){var o=[];for(var n=0;n<plan.slides.length;n++){var s=plan.slides[n];var b='';",
     "if(s.type==='title'){b=s.subtitle?'<p class=\"sub\" data-slide=\"'+n+'\" data-field=\"subtitle\" contenteditable=\"true\">'+esc(s.subtitle)+'</p>':'';}",
     "else if(s.support&&s.support.length){var it=[];for(var j=0;j<s.support.length;j++){",
     "it.push('<li data-slide=\"'+n+'\" data-field=\"support\" data-index=\"'+j+'\" contenteditable=\"true\">'+esc(s.support[j])+'</li>');}",
     "b='<ul>'+it.join('')+'</ul>';}",
     "var tag=(s.type==='title'&&plan.meta.version)?'<p class=\"vtag\">Version '+plan.meta.version+'</p>':'';",
+    "tag+=L();if(s.type!=='title')tag+='<p class=\"pgno\">'+(n+1)+'</p>';",
     "o.push('<section class=\"slide '+s.type+'\">'+tag+'<h3 data-slide=\"'+n+'\" data-field=\"title\" contenteditable=\"true\">'+esc(s.title)+'</h3>'+b+'</section>');}",
     "document.getElementById('stage').innerHTML=o.join('');fit();show(Math.min(i,plan.slides.length-1));}",
     "function fit(){var o=document.getElementById('outer');",
@@ -1297,6 +1570,14 @@ function loadPlanObject(incoming, label){
   plan.warnings = plan.warnings || [];
   version = plan.meta.version || version;
   document.getElementById("f-style").value = plan.meta.style || "operational";
+  var lg = plan.meta.logo;
+  if (lg && (lg.mode === "none" || lg.mode === "placeholder" || (lg.mode === "image" && LOGO_RE.test(lg.src || "")))){
+    logoState = { mode: lg.mode, src: lg.src || "" };
+  } else {
+    logoState = { mode: "placeholder", src: "" };
+    plan.meta.logo = { mode: "placeholder", src: "" };
+  }
+  paintLogoControls();
   syncFormFromPlan();
   recheckContent();
   document.getElementById("deck-empty").hidden = true;
@@ -1311,6 +1592,7 @@ function loadPlanObject(incoming, label){
   document.getElementById("timing").textContent =
     "v" + version + " · opened from a file";
   document.getElementById("btn-generate").textContent = "Update deck";
+  paintModeChip();
   showScreen("work");
   selectTab("deck");
   document.getElementById("version-note").textContent =
@@ -1483,9 +1765,10 @@ function showScreen(name){
   /* The guided answers and the brief are one draft: leaving the guided path writes it back. */
   if (screen === "guide" && name !== "guide") briefFromGuided();
   screen = name;
-  ["welcome", "guide", "work"].forEach(function(k){
+  ["welcome", "guide", "work", "ai"].forEach(function(k){
     document.getElementById("screen-" + k).hidden = (k !== name);
     var c = document.getElementById("crumb-" + k);
+    if (!c) return;
     if (k === name) c.setAttribute("aria-current", "page"); else c.removeAttribute("aria-current");
   });
   window.scrollTo(0, 0);
@@ -1522,14 +1805,16 @@ function renderBeats(){
   var box = document.getElementById("g-beats");
   box.innerHTML = "";
   beats.forEach(function(b, i){
-    var spec = BEATS[i] || { q: "Anything else they must know?", ph: "One sentence", dph: "Details, one per line" };
+    var spec = (b.kind && KINDS[b.kind])
+      ? { q: KINDS[b.kind].q, ph: "One sentence", dph: "Details, one per line" }
+      : (BEATS[i] || { q: "Anything else they must know?", ph: "One sentence", dph: "Details, one per line" });
     var card = document.createElement("div");
     card.className = "beat";
     var q = document.createElement("p"); q.className = "q";
     var num = document.createElement("span"); num.className = "num"; num.textContent = String(i + 1);
     var lab = document.createElement("label"); lab.htmlFor = "g-beat-" + i; lab.textContent = spec.q;
     q.appendChild(num); q.appendChild(lab);
-    if (i > 0){ var opt = document.createElement("span"); opt.className = "opt"; opt.textContent = "optional"; q.appendChild(opt); }
+    if (i > 0 && !b.kind){ var opt = document.createElement("span"); opt.className = "opt"; opt.textContent = "optional"; q.appendChild(opt); }
     var inp = document.createElement("input");
     inp.type = "text"; inp.id = "g-beat-" + i; inp.placeholder = spec.ph; inp.value = b.headline;
     inp.addEventListener("input", function(){ beats[i].headline = inp.value;
@@ -1540,7 +1825,7 @@ function renderBeats(){
     ta.id = "g-detail-" + i; ta.rows = 2; ta.placeholder = spec.dph; ta.value = b.detail;
     ta.addEventListener("input", function(){ beats[i].detail = ta.value; });
     card.appendChild(q); card.appendChild(inp); card.appendChild(dl); card.appendChild(ta);
-    if (i >= BEATS.length){
+    if (i >= BEATS.length || (b.kind && beats.length > 1)){
       var rm = document.createElement("button");
       rm.type = "button"; rm.className = "ghost remove"; rm.textContent = "Remove";
       rm.setAttribute("aria-label", "Remove point " + (i + 1));
@@ -1565,6 +1850,8 @@ function guidedFromBrief(){
     if (i < beats.length) beats[i] = b; else beats.push(b);
   });
   renderBeats();
+  document.getElementById("g-sorted-banner").hidden = true;
+  setGuideMode(msgs.length ? "prompts" : "free");
 }
 
 function guidedStyle(){
@@ -1646,6 +1933,18 @@ function renderReview(){
 function validStep(n){
   if (n === 3){
     var ok = beats.some(function(b){ return b.headline.trim(); });
+    var freeOpen = !document.getElementById("g-free").hidden;
+    if (freeOpen && document.getElementById("g-freetext").value.trim()){
+      /* Sort first and show the result, so nothing is built from text nobody has looked at. */
+      document.getElementById("g-sort").click();
+      return false;
+    }
+    if (!ok && freeOpen){
+      document.getElementById("g-sort-note").textContent =
+        "Write a few sentences about what happened, or switch to point by point.";
+      document.getElementById("g-freetext").focus();
+      return false;
+    }
     document.getElementById("g-beats-error").hidden = ok;
     if (!ok) document.getElementById("g-beat-0").focus();
     return ok;
@@ -1663,7 +1962,9 @@ function goStep(n){
   document.getElementById("g-next").textContent = step === STEPS ? "Build my deck" : "Next";
   if (step === STEPS) renderReview();
   var sec = document.querySelector('#screen-guide .step[data-step="' + step + '"]');
-  var first = sec.querySelector("input[type=text], textarea");
+  var first = step === 3
+    ? (document.getElementById("g-free").hidden ? document.getElementById("g-beat-0") : document.getElementById("g-freetext"))
+    : sec.querySelector("input[type=text], textarea");
   if (first && step !== STEPS) first.focus(); else sec.querySelector("h2").focus();
   window.scrollTo(0, 0);
 }
@@ -1737,6 +2038,625 @@ for (var cr = 0; cr < chipRows.length; cr++){
   })(chipRows[cr]);
 }
 
+/* ---------- Standard: sorting free text into slides ----------
+   Keyword rules, no model. It splits, sorts and places the person's own sentences and
+   never rewrites them, so every line on a slide still traces back to what they typed. */
+var KINDS = {
+  happened: { q: "What happened", label: "What happened" },
+  why:      { q: "Why it matters", label: "Why it matters" },
+  block:    { q: "What is in the way", label: "In the way" },
+  next:     { q: "What happens next", label: "Next" }
+};
+var KIND_ORDER = ["happened", "why", "block", "next"];
+var MONTHS = "january|february|march|april|may|june|july|august|september|october|november|december";
+var CUES = {
+  ask: new RegExp("\\b(we need|i need|need (your|you|a|an|the)\\b|seek(ing)?|request(ing)?|ask(ing)? (for|you)|" +
+    "please (approve|decide|support|endorse|note|agree)|approv(e|al)|decide|decision (on|to|by|is needed)|" +
+    "endorse(ment)?|sign[- ]?off|go-ahead|for your (decision|approval|information|support))\\b", "i"),
+  block: /\b(but|however|although|though|despite|risks?|issues?|problems?|challenges?|constraints?|blocked|blockers?|delay(s|ed)?|shortages?|lack(s|ing)?|unable|cannot|can't|couldn't|won't|concerns?|concerned|gaps?|bottlenecks?|struggl\w*|difficult\w*|left|leaving|short of|not enough|too few|until)\b/i,
+  next: new RegExp("\\b(next|will|plan(s|ned|ning)? to|going to|intend\\w*|aim(s|ing)? to|we'll|upcoming|roadmap|" +
+    "timeline|starting|from (next|" + MONTHS + ")|by (the )?(end of|" + MONTHS + "|q[1-4]|next))\\b", "i"),
+  why: /\b(because|so that|which means|this means|that means|meaning|shows?|showed|showing|matters?|important|impact\w*|benefit\w*|results? in|resulted in|led to|leads to|saved|saving|savings|improv\w*|reduc\w*|increas\w*|faster|cheaper|fewer)\b/i
+};
+
+function splitSentences(text){
+  var out = [];
+  String(text || "").replace(/\r/g, "").split(/\n+/).forEach(function(line){
+    line = line.replace(/^\s*(?:[-*•–]|\d+[.)])\s+/, "").trim();
+    if (!line) return;
+    var buf = "";
+    for (var i = 0; i < line.length; i++){
+      var ch = line[i];
+      buf += ch;
+      if (ch === "." || ch === "!" || ch === "?"){
+        if (i + 1 < line.length && !/\s/.test(line[i + 1])){
+          continue;                                   /* 40.5, e.g., URLs */
+        }
+        var rest = line.slice(i + 1).replace(/^\s+/, "");
+        var lastWord = (buf.match(/(\S+)$/) || [""])[0].toLowerCase();
+        if (/^(e\.g\.|i\.e\.|etc\.|vs\.|approx\.|mr\.|ms\.|mrs\.|dr\.|no\.|st\.)$/.test(lastWord)) continue;
+        if (!rest || /^["'“(]?[A-Z0-9]/.test(rest)){
+          if (buf.trim()) out.push(buf.trim());
+          buf = "";
+        }
+      }
+    }
+    if (buf.trim()) out.push(buf.trim());
+  });
+  return out;
+}
+
+function tidySentence(s){
+  return s.replace(/\s+/g, " ").replace(/[.;:,]+$/, "").trim();
+}
+function isEvidence(s){
+  return /\d/.test(s) || /^(e\.g\.|for example|for instance|including|such as)/i.test(s);
+}
+function isFiller(s){
+  if (/^(hi|hello|dear|thanks|thank you|regards|best|cheers|fyi)\b/i.test(s) && s.split(" ").length < 6) return true;
+  return s.split(" ").length < 3 && !/\d/.test(s);
+}
+function keywordKind(s){
+  if (CUES.ask.test(s)) return "ask";
+  if (CUES.block.test(s)) return "block";
+  if (CUES.next.test(s)) return "next";
+  if (CUES.why.test(s)) return "why";
+  return "happened";
+}
+
+/* classify: optional function(sentence) -> kind, used by the on-device model when present */
+function sortFreeText(text, haveAsk, classify){
+  var sentences = splitSentences(text).map(tidySentence).filter(function(s){ return s && !isFiller(s); });
+  var groups = { happened: [], why: [], block: [], next: [] }, asks = [], last = null;
+  sentences.forEach(function(s, idx){
+    var kind = classify ? classify(s, idx) : keywordKind(s);
+    var ev = isEvidence(s);
+    /* A bare fact with no cue of its own backs up whatever came just before it. */
+    if (!classify && kind === "happened" && ev && last && last !== "ask") kind = last;
+    if (kind === "detail") kind = (last && last !== "ask") ? last : "happened";
+    if (kind === "ask"){
+      if (!haveAsk && !asks.length){ asks.push(s); last = "ask"; return; }
+      kind = "next";
+    }
+    groups[kind].push({ text: s, evidence: ev });
+    last = kind;
+  });
+
+  var out = [];
+  KIND_ORDER.forEach(function(kind){
+    var point = null;
+    groups[kind].forEach(function(item){
+      var startNew = !point || (!item.evidence && point.details.length > 0) ||
+        (!item.evidence && !point.headlineIsClaim) || point.details.length >= 5;
+      if (startNew){
+        point = { kind: kind, headline: item.text, details: [], headlineIsClaim: !item.evidence };
+        out.push(point);
+      } else {
+        point.details.push(item.text);
+      }
+    });
+  });
+  return {
+    beats: out.map(function(p){ return { kind: p.kind, headline: p.headline, detail: p.details.join("\n") }; }),
+    ask: asks[0] || "",
+    sentences: sentences.length
+  };
+}
+
+function setGuideMode(mode){
+  var free = mode === "free";
+  document.getElementById("g-free").hidden = !free;
+  document.getElementById("g-prompts").hidden = free;
+  document.getElementById("g-mode-free").setAttribute("aria-selected", free);
+  document.getElementById("g-mode-prompts").setAttribute("aria-selected", !free);
+}
+
+function applySorted(res, how){
+  var note = document.getElementById("g-sort-note");
+  if (!res.beats.length){
+    note.textContent = res.ask
+      ? "That reads like your ask, but there's nothing yet about what happened. Add a sentence or two."
+      : "Nothing to sort yet — write a few sentences about what happened.";
+    if (res.ask) document.getElementById("g-purpose").value = res.ask;
+    return;
+  }
+  beats = res.beats;
+  var askMsg = "";
+  if (res.ask){
+    document.getElementById("g-purpose").value = res.ask;
+    askMsg = " and took “" + res.ask + "” as your ask";
+  }
+  var banner = document.getElementById("g-sorted-banner");
+  banner.hidden = false;
+  banner.textContent = "Sorted " + res.sentences + " sentence" + (res.sentences === 1 ? "" : "s") +
+    " into " + res.beats.length + " slide" + (res.beats.length === 1 ? "" : "s") + askMsg + ". " +
+    (how === "ai"
+      ? "The on-device AI chose where each sentence goes; your wording is unchanged. Move or edit anything that landed in the wrong place."
+      : "Sorting goes by keywords, so move or edit anything that landed in the wrong place.");
+  note.textContent = "";
+  renderBeats();
+  setGuideMode("prompts");
+  document.getElementById("g-beats-error").hidden = true;
+}
+
+document.getElementById("g-sort").addEventListener("click", function(){
+  var haveAsk = !!document.getElementById("g-purpose").value.trim();
+  applySorted(sortFreeText(document.getElementById("g-freetext").value, haveAsk), "rules");
+});
+document.getElementById("g-mode-free").addEventListener("click", function(){ setGuideMode("free"); });
+document.getElementById("g-mode-prompts").addEventListener("click", function(){ setGuideMode("prompts"); });
+
+/* ---------- Supercharged: an optional on-device model ----------
+   Nothing here runs unless the person chooses it. The model, its runtime and the engine
+   are published on this same site by the repository's build workflow, listed in
+   models/manifest.json with a SHA-256 fingerprint for every file. The download below
+   checks each file against that fingerprint before anything uses it, keeps it in this
+   browser, and from then on the model runs with no connection at all. Text the person
+   types is only ever handed to the model inside this page. */
+var AI = { manifest: null, manifestTried: null, engine: null, engineLoading: null,
+           busy: false, abort: null, check: null };
+var AI_CACHE = "handsondeck-ai";
+var LS_MODE = "hod.mode", LS_AI = "hod.ai.installed";
+
+function lsGet(k){ try { return window.localStorage.getItem(k); } catch (e){ return null; } }
+function lsSet(k, v){
+  try { if (v === null) window.localStorage.removeItem(k); else window.localStorage.setItem(k, v); }
+  catch (e){}
+}
+function siteUrl(rel){ return new URL(rel, location.href).href; }
+function fmtMB(b){
+  var mb = b / 1048576;
+  return (mb >= 1000 ? (mb / 1024).toFixed(1) + " GB" : Math.round(mb) + " MB");
+}
+function hex(buf){
+  var a = new Uint8Array(buf), out = "";
+  for (var i = 0; i < a.length; i++) out += (a[i] < 16 ? "0" : "") + a[i].toString(16);
+  return out;
+}
+function contentTypeFor(p){
+  if (/\.wasm$/.test(p)) return "application/wasm";
+  if (/\.json$/.test(p)) return "application/json";
+  if (/\.js$/.test(p)) return "text/javascript";
+  return "application/octet-stream";
+}
+
+function loadManifest(){
+  if (AI.manifestTried) return AI.manifestTried;
+  if (location.protocol === "file:"){ AI.manifestTried = Promise.resolve(null); return AI.manifestTried; }
+  AI.manifestTried = fetch("models/manifest.json", { cache: "no-cache" })
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(m){ AI.manifest = (m && m.model && m.files) ? m : null; return AI.manifest; })
+    .catch(function(){ return null; });
+  return AI.manifestTried;
+}
+
+function installedKey(m){ return m.model.id + "@" + m.engine.version; }
+function aiInstalled(){
+  var v = lsGet(LS_AI);
+  return !!(v && (!AI.manifest || v === installedKey(AI.manifest)));
+}
+function aiReady(){ return lsGet(LS_MODE) === "super" && aiInstalled(); }
+
+function appConfigFor(m){
+  var rec = {};
+  for (var k in m.model.record) rec[k] = m.model.record[k];
+  rec.model = siteUrl(m.model.record.model);
+  rec.model_lib = siteUrl(m.model.record.model_lib);
+  return { model_list: [rec] };
+}
+
+function engineModule(m){
+  if (typeof window.__hodEngineFactory === "object") return Promise.resolve(window.__hodEngineFactory);
+  return import(siteUrl(m.engine.path));
+}
+
+/* Device check: decides whether Supercharged is offered at all, and says why not. */
+function deviceCheck(m){
+  var res = { ok: true, items: [] };
+  function add(state, text){ res.items.push({ state: state, text: text }); if (state === "no") res.ok = false; }
+  if (location.protocol === "file:" || !window.isSecureContext){
+    add("no", "Open HandsOnDeck from its web address, not a saved copy, to set up Supercharged.");
+    return Promise.resolve(res);
+  }
+  if (!m){
+    add("no", "Supercharged isn't published on this site yet. Standard works fully in the meantime.");
+    return Promise.resolve(res);
+  }
+  if (!("serviceWorker" in navigator) || !window.caches || !(window.crypto && crypto.subtle)){
+    add("no", "This browser can't store an offline download safely.");
+    return Promise.resolve(res);
+  }
+  var chain = Promise.resolve();
+  if (!navigator.gpu){
+    add("no", "This browser doesn't support WebGPU, which the on-device AI needs. A recent Chrome or Edge, or Safari on a recent iPhone, iPad or Mac, usually does.");
+  } else {
+    chain = navigator.gpu.requestAdapter().then(function(adapter){
+      if (!adapter){ add("no", "No usable graphics processor was found for the on-device AI."); return; }
+      var need = m.model.record.required_features || [];
+      var missing = need.filter(function(f){ return !adapter.features.has(f); });
+      if (missing.length) add("no", "This device's graphics processor is missing a feature the model needs (" + missing.join(", ") + ").");
+      else add("yes", "Graphics processor supports the on-device AI.");
+    }).catch(function(){ add("no", "The graphics processor couldn't be reached."); });
+  }
+  return chain.then(function(){
+    if (navigator.deviceMemory && navigator.deviceMemory < 4){
+      add("warn", "This device reports under 4 GB of memory, so the AI may be slow or fail to load.");
+    }
+    if (navigator.storage && navigator.storage.estimate){
+      return navigator.storage.estimate().then(function(est){
+        var free = (est.quota || 0) - (est.usage || 0);
+        var need = m.totalBytes * 2.1;   /* checked copy plus the model's own copy, briefly */
+        if (est.quota && free < need) add("no", "Not enough free storage: needs about " + fmtMB(need) + " while installing, " + fmtMB(free) + " available.");
+        else add("yes", "Enough free storage.");
+      }).catch(function(){});
+    }
+  }).then(function(){ return res; });
+}
+
+function ensureServiceWorkerControl(){
+  if (!("serviceWorker" in navigator)) return Promise.reject(new Error("This browser can't store an offline download."));
+  return navigator.serviceWorker.ready.then(function(){
+    if (navigator.serviceWorker.controller) return;
+    return new Promise(function(resolve, reject){
+      var t = setTimeout(function(){ reject(new Error("Reload the page once, then try again.")); }, 6000);
+      navigator.serviceWorker.addEventListener("controllerchange", function(){ clearTimeout(t); resolve(); }, { once: true });
+    });
+  });
+}
+
+/* ---- the AI screen ---- */
+function aiSetProgress(frac, text){
+  document.getElementById("ai-progress").hidden = false;
+  document.getElementById("ai-fill").style.width = Math.round(Math.max(0, Math.min(1, frac)) * 100) + "%";
+  document.getElementById("ai-ptext").textContent = text;
+}
+function aiError(msg){
+  var e = document.getElementById("ai-error");
+  e.hidden = !msg; e.textContent = msg || "";
+}
+function paintModeChip(){
+  var chip = document.getElementById("mode-chip");
+  var on = aiReady();
+  chip.textContent = on ? "✦ Supercharged" : "Standard";
+  chip.classList.toggle("on", on);
+  var els = document.querySelectorAll(".ai-only");
+  for (var i = 0; i < els.length; i++) els[i].hidden = !on;
+  document.getElementById("btn-tighten").disabled = !(on && plan);
+  document.getElementById("mode-choice").hidden = !!lsGet(LS_MODE);
+}
+
+function paintAIScreen(){
+  var m = AI.manifest;
+  var facts = document.getElementById("ai-facts");
+  facts.innerHTML = "";
+  document.getElementById("ai-origin").textContent = location.host || "this site";
+  if (m){
+    [["Download", fmtMB(m.totalBytes) + ", once"],
+     ["Model", m.model.name || m.model.id],
+     ["Works offline", "Yes, after download"]].forEach(function(f){
+      var d = document.createElement("div");
+      var dt = document.createElement("dt"); dt.textContent = f[0];
+      var dd = document.createElement("dd"); dd.textContent = f[1];
+      d.appendChild(dt); d.appendChild(dd); facts.appendChild(d);
+    });
+  }
+  var installed = aiInstalled() && !!m;
+  var dl = document.getElementById("ai-download");
+  document.getElementById("ai-remove").hidden = !installed || AI.busy;
+  document.getElementById("ai-cancel").hidden = !AI.busy;
+  document.getElementById("ai-tip").hidden = !installed;
+  if (AI.busy){ dl.disabled = true; dl.textContent = "Working…"; return; }
+  if (installed){
+    dl.disabled = false;
+    dl.textContent = lsGet(LS_MODE) === "super" ? "Use Supercharged" : "Switch to Supercharged";
+    return;
+  }
+  dl.disabled = true;
+  dl.textContent = "Checking this device…";
+  var checks = document.getElementById("ai-checks");
+  deviceCheck(m).then(function(res){
+    AI.check = res;
+    checks.innerHTML = "";
+    res.items.forEach(function(it){
+      var li = document.createElement("li");
+      li.className = it.state === "yes" ? "" : it.state;
+      li.textContent = it.text;
+      checks.appendChild(li);
+    });
+    if (AI.busy) return;
+    dl.disabled = !res.ok;
+    dl.textContent = res.ok ? "Download " + fmtMB(m.totalBytes) : "Not available here";
+  });
+}
+
+function openAIScreen(){
+  aiError("");
+  showScreen("ai");
+  loadManifest().then(paintAIScreen);
+  document.getElementById("ai-h").focus();
+}
+
+/* Download every file, check its fingerprint, keep only files that match. Files already
+   checked are skipped, so a paused or interrupted download picks up where it stopped. */
+function aiDownload(m, signal){
+  var total = m.totalBytes, done = 0;
+  return ensureServiceWorkerControl().then(function(){ return caches.open(AI_CACHE); }).then(function(cache){
+    var i = 0;
+    function next(){
+      if (i >= m.files.length) return Promise.resolve(cache);
+      var f = m.files[i++], url = siteUrl(f.path);
+      return cache.match(url).then(function(hit){
+        if (hit && hit.headers.get("x-hod-sha256") === f.sha256){ done += f.size; return next(); }
+        return fetch(url, { cache: "no-store", signal: signal }).then(function(res){
+          if (!res.ok) throw new Error("Couldn't download " + f.path + " (" + res.status + ").");
+          var reader = res.body.getReader(), chunks = [], got = 0;
+          function pump(){
+            return reader.read().then(function(r){
+              if (r.done) return;
+              chunks.push(r.value); got += r.value.length;
+              aiSetProgress((done + got) / total * 0.85,
+                "Downloading and checking — " + fmtMB(done + got) + " of " + fmtMB(total));
+              return pump();
+            });
+          }
+          return pump().then(function(){
+            var blob = new Blob(chunks);
+            return blob.arrayBuffer().then(function(buf){ return crypto.subtle.digest("SHA-256", buf); })
+              .then(function(digest){
+                var h = hex(digest);
+                if (h !== f.sha256){
+                  throw new Error("A downloaded file didn't match its fingerprint (" + f.path +
+                    "), so it was discarded and nothing was installed. Try again later.");
+                }
+                done += f.size;
+                return cache.put(url, new Response(blob, { headers: {
+                  "content-type": contentTypeFor(f.path), "x-hod-sha256": h } }));
+              });
+          });
+        });
+      }).then(next);
+    }
+    return next();
+  });
+}
+
+function aiStartEngine(m, onProgress){
+  if (AI.engine) return Promise.resolve(AI.engine);
+  if (AI.engineLoading) return AI.engineLoading;
+  AI.engineLoading = engineModule(m).then(function(mod){
+    return mod.CreateMLCEngine(m.model.id, {
+      appConfig: appConfigFor(m),
+      initProgressCallback: function(r){ if (onProgress) onProgress(r); }
+    });
+  }).then(function(engine){
+    AI.engine = engine; AI.engineLoading = null; return engine;
+  }, function(err){
+    AI.engineLoading = null; throw err;
+  });
+  return AI.engineLoading;
+}
+
+function aiInstall(){
+  var m = AI.manifest;
+  if (!m || AI.busy) return;
+  AI.busy = true; aiError(""); paintAIScreen();
+  AI.abort = window.AbortController ? new AbortController() : null;
+  aiDownload(m, AI.abort && AI.abort.signal).then(function(cache){
+    aiSetProgress(0.85, "All files checked. Setting up the model on this device…");
+    return aiStartEngine(m, function(r){
+      aiSetProgress(0.85 + 0.15 * (r.progress || 0), "Setting up the model on this device…");
+    }).then(function(){
+      /* The model now keeps its own copy; drop the checked model files so storage isn't
+         used twice. The engine and the manifest stay, so the app can start it offline. */
+      return Promise.all(m.files.map(function(f){
+        return f.keep ? null : cache.delete(siteUrl(f.path));
+      })).then(function(){
+        return cache.put(siteUrl("models/manifest.json"), new Response(JSON.stringify(m),
+          { headers: { "content-type": "application/json" } }));
+      });
+    });
+  }).then(function(){
+    lsSet(LS_AI, installedKey(m));
+    lsSet(LS_MODE, "super");
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function(){});
+    aiSetProgress(1, "Ready. Supercharged now works on this device, with or without internet.");
+    AI.busy = false; paintAIScreen(); paintModeChip();
+    notify("Supercharged is on. Look for ✦ in the guided steps and above the deck.");
+  }).catch(function(err){
+    AI.busy = false;
+    var aborted = err && err.name === "AbortError";
+    aiError(aborted ? "" : (err && err.message) || "Setup didn't finish.");
+    aiSetProgress(0, aborted ? "Paused. Checked files are kept — Download picks up where it stopped."
+                             : "Setup didn't finish. Standard mode still works.");
+    paintAIScreen(); paintModeChip();
+  });
+}
+
+function aiRemove(){
+  var m = AI.manifest;
+  var drop = m ? engineModule(m).then(function(mod){
+    if (AI.engine && AI.engine.unload) AI.engine.unload();
+    if (mod.deleteModelAllInfoInCache) return mod.deleteModelAllInfoInCache(m.model.id, appConfigFor(m));
+  }).catch(function(){}) : Promise.resolve();
+  drop.then(function(){ return caches.delete(AI_CACHE); }).catch(function(){}).then(function(){
+    AI.engine = null;
+    lsSet(LS_AI, null); lsSet(LS_MODE, "standard");
+    document.getElementById("ai-progress").hidden = true;
+    paintAIScreen(); paintModeChip();
+    notify("Supercharged removed from this device. Standard mode is on.");
+  });
+}
+
+/* Run one task on the model, starting it first if this is the first use this visit. */
+function withEngine(label){
+  var m = AI.manifest;
+  if (!m) return loadManifest().then(function(mm){
+    if (!mm) throw new Error("Supercharged isn't available right now.");
+    return withEngine(label);
+  });
+  if (!AI.engine) notify("Starting the on-device AI…");
+  return aiStartEngine(m).catch(function(err){
+    throw new Error("The on-device AI couldn't start (" + ((err && err.message) || "unknown error") +
+      "). It may have been cleared by the browser — set it up again from ✦ Supercharged. Standard mode still works.");
+  });
+}
+
+function ask(engine, system, shots, user, maxTokens){
+  var msgs = [{ role: "system", content: system }];
+  shots.forEach(function(p){ msgs.push({ role: "user", content: p[0] }, { role: "assistant", content: p[1] }); });
+  msgs.push({ role: "user", content: user });
+  return engine.chat.completions.create({ messages: msgs, temperature: 0, max_tokens: maxTokens })
+    .then(function(r){ return ((r.choices && r.choices[0] && r.choices[0].message.content) || "").trim(); });
+}
+
+var SORT_SYSTEM = "You sort sentences from a work update into slide sections. Reply with exactly one word: " +
+  "happened, why, block, next, ask, or detail. happened = an event or change. why = why it matters or what it shows. " +
+  "block = a problem, risk or constraint. next = a plan or next step. ask = a request for a decision, approval or support. " +
+  "detail = a number or example backing up the sentence before it.";
+var SORT_SHOTS = [
+  ["Sales in the east region fell 12% last quarter.", "happened"],
+  ["That puts the annual target at risk.", "why"],
+  ["We don't have enough staff to cover weekends.", "block"],
+  ["We will run a trial in two stores from May.", "next"],
+  ["We need your approval for the extra budget.", "ask"],
+  ["For example, the Tampines store lost 40 orders.", "detail"]
+];
+var KIND_WORDS = ["happened", "why", "block", "next", "ask", "detail"];
+
+function aiSortFreeText(){
+  var text = document.getElementById("g-freetext").value;
+  var note = document.getElementById("g-sort-note");
+  var sentences = splitSentences(text).map(tidySentence).filter(function(s){ return s && !isFiller(s); });
+  if (!sentences.length){ note.textContent = "Nothing to sort yet — write a few sentences about what happened."; return; }
+  var btn = document.getElementById("g-sort-ai");
+  btn.disabled = true;
+  withEngine().then(function(engine){
+    var kinds = [], i = 0;
+    function next(){
+      if (i >= sentences.length) return Promise.resolve();
+      note.textContent = "Reading sentence " + (i + 1) + " of " + sentences.length + " on this device…";
+      var s = sentences[i];
+      return ask(engine, SORT_SYSTEM, SORT_SHOTS, s, 4).then(function(out){
+        var w = (out.toLowerCase().match(/[a-z]+/) || [""])[0];
+        kinds.push(KIND_WORDS.indexOf(w) !== -1 ? w : keywordKind(s));
+        i++; return next();
+      });
+    }
+    return next().then(function(){
+      var haveAsk = !!document.getElementById("g-purpose").value.trim();
+      applySorted(sortFreeText(text, haveAsk, function(s, idx){ return kinds[idx]; }), "ai");
+    });
+  }).catch(function(err){
+    note.textContent = (err && err.message) || "The on-device AI didn't finish.";
+  }).then(function(){ btn.disabled = false; });
+}
+
+var TIGHTEN_SYSTEM = "You shorten slide headlines. At most 10 words. Keep every number, name and fact exactly " +
+  "as written. Never add information that is not in the text. Reply with the headline only.";
+var TIGHTEN_SHOTS = [
+  ["The pilot programme that we ran in the north cut the average processing time from 9 days to 4 days",
+   "Pilot cut processing time from 9 days to 4"],
+  ["We found that most of the delays were happening because forms were incomplete when they arrived",
+   "Most delays come from incomplete forms"]
+];
+
+/* Accept a shortened headline only if it is actually shorter, adds no numbers that were
+   not in the person's text, and drops none of the numbers that were in the headline. */
+function acceptHeadline(orig, support, out){
+  out = String(out || "").split("\n")[0].replace(/^headline:\s*/i, "")
+    .replace(/^["'“‘\s]+|["'”’\s]+$/g, "").replace(/\.+$/, "").trim();
+  if (!out || out.toLowerCase() === orig.toLowerCase()) return null;
+  if (out.length >= orig.length || out.split(/\s+/).length > 12) return null;
+  var src = orig + " " + support.join(" ");
+  var outNums = out.match(/\d[\d,.]*/g) || [], origNums = orig.match(/\d[\d,.]*/g) || [];
+  for (var i = 0; i < outNums.length; i++) if (src.indexOf(outNums[i].replace(/[.,]+$/, "")) === -1) return null;
+  for (var j = 0; j < origNums.length; j++) if (out.indexOf(origNums[j].replace(/[.,]+$/, "")) === -1) return null;
+  return out;
+}
+
+function aiTightenHeadlines(fromChat){
+  if (!plan) return;
+  var targets = [];
+  plan.slides.forEach(function(s, i){
+    if (s.type === "point" && s.title.split(/\s+/).length > 8) targets.push(i);
+  });
+  if (!targets.length){
+    var msg = "Every headline is already eight words or fewer.";
+    if (fromChat) say("HandsOnDeck", msg); else notify(msg);
+    return;
+  }
+  var btn = document.getElementById("btn-tighten");
+  btn.disabled = true;
+  withEngine().then(function(engine){
+    var changes = [], k = 0;
+    function next(){
+      if (k >= targets.length) return Promise.resolve();
+      var idx = targets[k++], s = plan.slides[idx];
+      notify("Tightening headline " + k + " of " + targets.length + " on this device…");
+      var support = s.support || [];
+      var user = s.title + (support.length ? "\nSupporting points: " + support.join("; ") : "");
+      return ask(engine, TIGHTEN_SYSTEM, TIGHTEN_SHOTS, user, 40).then(function(out){
+        var ok = acceptHeadline(s.title, support, out);
+        if (ok) changes.push({ idx: idx, from: s.title, to: ok });
+        return next();
+      });
+    }
+    return next().then(function(){
+      if (!changes.length){
+        var none = "The on-device AI didn't find a shorter version it could stand behind, so nothing changed.";
+        if (fromChat) say("HandsOnDeck", none); else notify(none);
+        return;
+      }
+      snapshot();
+      plan.meta.aiReworded = plan.meta.aiReworded || [];
+      changes.forEach(function(c){
+        plan.slides[c.idx].title = c.to;
+        plan.meta.aiReworded.push(c.to);
+      });
+      syncFormFromPlan(); recheckContent(); refreshPlanView(); refreshContentCheck(); markEdited();
+      renderDeck(changes[0].idx);
+      var done = "Shortened " + changes.length + " headline" + (changes.length === 1 ? "" : "s") +
+        " on this device. They're marked ✦ — check them, edit them, or Undo.";
+      if (fromChat) say("HandsOnDeck", done); else notify(done, "Undo", undo);
+    });
+  }).catch(function(err){
+    var m = (err && err.message) || "The on-device AI didn't finish.";
+    if (fromChat) say("HandsOnDeck", m, true); else notify(m);
+  }).then(function(){ paintModeChip(); });
+}
+
+document.getElementById("mode-chip").addEventListener("click", openAIScreen);
+document.getElementById("mc-super").addEventListener("click", openAIScreen);
+document.getElementById("mc-standard").addEventListener("click", function(){
+  lsSet(LS_MODE, "standard"); paintModeChip();
+  notify("Standard mode. Supercharged is in the top bar if you want it later.");
+});
+document.getElementById("ai-back").addEventListener("click", function(){
+  showScreen(plan ? "work" : "welcome");
+});
+document.getElementById("ai-standard").addEventListener("click", function(){
+  if (!AI.busy) lsSet(LS_MODE, "standard");
+  paintModeChip(); showScreen(plan ? "work" : "welcome");
+});
+document.getElementById("ai-download").addEventListener("click", function(){
+  if (aiInstalled() && AI.manifest){
+    lsSet(LS_MODE, "super"); paintModeChip();
+    notify("Supercharged is on.");
+    showScreen(plan ? "work" : "welcome");
+    return;
+  }
+  aiInstall();
+});
+document.getElementById("ai-cancel").addEventListener("click", function(){ if (AI.abort) AI.abort.abort(); });
+document.getElementById("ai-remove").addEventListener("click", aiRemove);
+document.getElementById("g-sort-ai").addEventListener("click", aiSortFreeText);
+document.getElementById("btn-tighten").addEventListener("click", function(){ aiTightenHeadlines(false); });
+
+loadManifest().then(function(m){
+  if (m) document.getElementById("mc-size").textContent = fmtMB(m.totalBytes) + " one-time download";
+  paintModeChip();
+});
+
 /* ---------- start screen and navigation ---------- */
 document.getElementById("path-guide").addEventListener("click", startGuide);
 document.getElementById("path-brief").addEventListener("click", function(){
@@ -1781,7 +2701,7 @@ document.getElementById("chat-help").addEventListener("click", function(e){
 var fileBtns = document.querySelectorAll(".filebtn");
 for (var fb = 0; fb < fileBtns.length; fb++){
   fileBtns[fb].addEventListener("keydown", function(e){
-    if (e.key === "Enter" || e.key === " "){ e.preventDefault(); document.getElementById("f-open").click(); }
+    if (e.key === "Enter" || e.key === " "){ e.preventDefault(); document.getElementById(this.htmlFor).click(); }
   });
 }
 

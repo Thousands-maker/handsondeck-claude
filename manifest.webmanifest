@@ -1,7 +1,7 @@
 {
   "name": "HandsOnDeck",
   "short_name": "HandsOnDeck",
-  "description": "Turn a plain-language brief into real HTML slides. Runs entirely in the browser, with no network calls and no model in the loop.",
+  "description": "Turn a plain-language brief into real HTML slides. Runs entirely in the browser and works offline, with an optional on-device AI.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

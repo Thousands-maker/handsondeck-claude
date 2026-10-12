@@ -9,7 +9,12 @@
  * the cache in the background when a network happens to be available.
  */
 
-var VERSION = "handsondeck-v2";
+var VERSION = "handsondeck-v3";
+
+/* Supercharged mode (optional). Files the page has downloaded AND checked against their
+   SHA-256 fingerprints live in this cache; the worker serves them from here so the model
+   only ever receives checked bytes, and so the engine starts with no connection. */
+var AI_CACHE = "handsondeck-ai";
 var SHELL = [
   "./",
   "./index.html",
@@ -38,7 +43,8 @@ self.addEventListener("activate", function (event) {
     caches.keys().then(function (keys) {
       return Promise.all(
         keys.map(function (key) {
-          return key === VERSION ? null : caches.delete(key);
+          return (key === VERSION || key === AI_CACHE || key.indexOf("webllm") === 0)
+            ? null : caches.delete(key);
         })
       );
     }).then(function () {
@@ -52,7 +58,26 @@ self.addEventListener("fetch", function (event) {
 
   // Only handle same-origin GETs. Everything else is passed straight through.
   if (req.method !== "GET") return;
-  if (new URL(req.url).origin !== self.location.origin) return;
+  var url = new URL(req.url);
+  if (url.origin !== self.location.origin) return;
+
+  // Model and engine files: checked copies first, never copied into the app cache
+  // (they are hundreds of MB). The manifest goes to the network first so an updated
+  // model is noticed, falling back to the saved copy offline.
+  if (/\/(models|vendor)\//.test(url.pathname)) {
+    if (/\/models\/manifest\.json$/.test(url.pathname)) {
+      event.respondWith(fetch(req).catch(function () {
+        return caches.open(AI_CACHE).then(function (c) { return c.match(req, { ignoreSearch: true }); })
+          .then(function (hit) { return hit || new Response("", { status: 504 }); });
+      }));
+      return;
+    }
+    event.respondWith(
+      caches.open(AI_CACHE).then(function (c) { return c.match(req, { ignoreSearch: true }); })
+        .then(function (hit) { return hit || fetch(req); })
+    );
+    return;
+  }
 
   event.respondWith(
     caches.match(req).then(function (cached) {

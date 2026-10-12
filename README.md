@@ -4,8 +4,10 @@ Turn a plain-language brief into real HTML slides you can edit, version and send
 
 **Live:** https://thousands-maker.github.io/handsondeck-claude/
 
-Deliberately small: one file, no build step, no dependencies, no server, no model.
-It works offline, it works from a USB stick, and nothing you type leaves your browser.
+Deliberately small: one file, no build step, no dependencies, no server. It works
+offline, it works from a USB stick, and nothing you type leaves your browser. An optional
+on-device AI model (Supercharged mode) can be downloaded once from the same site; the app
+works fully without it.
 
 ---
 
@@ -41,6 +43,15 @@ the two user groups:
   something the person typed.
 - **I'll write the brief** — straight to the form and the deck, for someone who already
   knows their key messages.
+
+In the guided path, *what happened* opens on a free-text box: **Just tell me what
+happened**. Paste an email or type it the way you'd say it, and **Sort it into slides**
+splits it into sentences and places each one — what happened, why it matters, what is in
+the way, what happens next — with numbers and examples attached as bullets under the
+sentence they back up, and a sentence that asks for a decision taken as the ask. It uses
+keyword rules, not a model, and never rewrites a sentence: it only splits, sorts and
+places the person's own words, so the content check still holds. The result opens point
+by point for the person to move or edit before anything is built.
 
 The example briefing is never loaded on its own. It sits behind a button — *see a finished
 example first* on the start screen, *Load example* on the brief, *Fill with example
@@ -85,6 +96,67 @@ Three labels are exempt as known scaffolding: *Why we are here*, *The ask*,
 
 ---
 
+## Supercharged mode — optional, on-device AI
+
+On first visit the start screen asks how the app should run on this device:
+
+- **Standard — ready now.** Everything above. Nothing to download.
+- **Supercharged — one-time download.** Adds a small AI model (by default Qwen2.5 0.5B
+  Instruct, about 300–400 MB) that runs in the browser on the device's graphics
+  processor, through [WebLLM](https://github.com/mlc-ai/web-llm). It adds two things:
+  - **Smarter sorting** of free text: the model reads each sentence and decides which
+    slide it belongs on. Wording is still the person's own.
+  - **Tighter headlines**: *✦ Tighten headlines* above the deck, or `tighten headlines` in
+    chat, shortens long headlines to ten words or fewer. A shortened headline is only
+    accepted if it is actually shorter, adds no number that wasn't in the person's text,
+    and drops none of the numbers in the original. Accepted headlines are marked ✦ on the
+    slide strip and counted separately by the content check until a person edits them,
+    and Undo reverses the whole step.
+
+How it stays safe and offline:
+
+- **Same site only.** The model, its WebGPU runtime and the WebLLM engine are published on
+  this site by the build workflow (below). The app never loads them from anywhere else.
+- **Checked before use.** `models/manifest.json` lists every file with its size and
+  SHA-256. The app downloads each file, checks it, and keeps it only if it matches; the
+  service worker then serves only checked copies to the model. A file that fails the check
+  is discarded and nothing is installed. Downloads can be paused, and resume where they
+  stopped.
+- **Offline afterwards.** Once installed, it runs with no connection. Text is only handed
+  to the model inside the page.
+- **Only where it can work.** A device check (WebGPU, required GPU features, memory hint,
+  free storage) runs before the download is offered, and says plainly why not when it
+  isn't. If the browser later clears the model, the app falls back to Standard and says so.
+- **Removable.** *Remove from this device* deletes the model and its caches.
+
+Limits worth stating: it is a small model, so it can misjudge; it is slower on phones; it
+needs a reasonably recent browser with WebGPU; it only works from the hosted site, not a
+saved copy of the file; and on iPhone the browser may clear stored data for sites that
+aren't added to the home screen. GitHub Pages also has a soft bandwidth limit of about
+100 GB a month, which at this model size is a few hundred first-time downloads.
+
+### Publishing it
+
+`.github/workflows/pages.yml` builds and publishes the site on every push to `main`.
+GitHub's servers install the engine, bundle it into `vendor/web-llm.js`, download the
+model weights and runtime (checking them against the model host's own SHA-256 where it
+publishes one), and write the manifest — `tools/prepare-model.mjs` does the work. To pick
+a different model, run the workflow by hand and give a WebLLM model id.
+
+One-time setting: **Settings → Pages → Build and deployment → Source: GitHub Actions.**
+
+---
+
+## Logo and page numbers
+
+Every slide carries a logo slot. By default it is a neutral *Your logo* placeholder;
+**Upload logo** in the brief replaces it on every slide with a PNG, JPG, SVG or WebP up to
+500 KB, and *No logo* removes it. The image is stored inside the slide plan, so it travels
+with downloaded and editable copies and comes back when a deck is reopened. Every slide
+except the title slide shows its page number.
+
+---
+
 ## Offline
 
 The app works with no connection, and that is a design position rather than a side
@@ -92,7 +164,8 @@ effect.
 
 - **No network calls at all.** No CDN, no fonts, no analytics, no API. Everything —
   parsing, structuring, rendering, versioning, download — runs in the page.
-- **No model in the loop.** The chat surface parses a fixed command set
+- **No model in the loop by default.** Supercharged mode is opt-in and runs on the
+  device. Without it, the chat surface parses a fixed command set
   deterministically. That is a deliberate limit, not a stub: it demonstrates the surface
   and the shared source of truth without making the product depend on an external
   service, a network, or a per-call cost.
@@ -223,8 +296,10 @@ test should find out.
 
 ```
 index.html                     the app — one file, no build step
-sw.js                          service worker, precaches the shell
+sw.js                          service worker, precaches the shell, serves checked model files
 manifest.webmanifest           installable as a standalone app
+tools/prepare-model.mjs        build step: bundles the engine, fetches and fingerprints the model
+.github/workflows/pages.yml    publishes the site and the optional model to GitHub Pages
 mcp/                           optional MCP server — off unless you start it
 docs/jtbd-and-user-stories.md  jobs-to-be-done and user stories with acceptance criteria
 docs/product-deck.md           the case for the product, in eight slides

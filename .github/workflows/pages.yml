@@ -1,0 +1,69 @@
+name: Publish site
+
+# Publishes HandsOnDeck to GitHub Pages, together with the optional Supercharged model.
+# The model is fetched here, on GitHub's servers, checked, and published on this same
+# site, so people using the app only ever download from this site.
+#
+# One-time setting: Settings -> Pages -> Build and deployment -> Source: GitHub Actions.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      model_id:
+        description: "WebLLM model id for Supercharged mode"
+        required: false
+        default: "Qwen2.5-0.5B-Instruct-q4f16_1-MLC"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  MODEL_ID: ${{ github.event.inputs.model_id || 'Qwen2.5-0.5B-Instruct-q4f16_1-MLC' }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install the engine and bundler (build time only)
+        run: npm install --no-save --no-package-lock --no-audit --no-fund @mlc-ai/web-llm@0.2 esbuild@0.25
+
+      - name: Reuse model files from earlier builds
+        uses: actions/cache@v4
+        with:
+          path: .model-cache
+          key: model-${{ env.MODEL_ID }}-${{ hashFiles('tools/prepare-model.mjs') }}
+          restore-keys: model-${{ env.MODEL_ID }}-
+
+      - name: Assemble the site
+        run: |
+          mkdir -p _site
+          cp index.html sw.js manifest.webmanifest icon.svg .nojekyll _site/
+          node tools/prepare-model.mjs _site
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
