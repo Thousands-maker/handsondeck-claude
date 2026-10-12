@@ -2332,7 +2332,7 @@ function paintAIScreen(){
   document.getElementById("ai-origin").textContent = location.host || "this site";
   if (m){
     [["Download", fmtMB(m.totalBytes) + ", once"],
-     ["Model", m.model.name || m.model.id],
+     ["Model", (m.model.name || m.model.id) + (m.model.publisher ? " \u00B7 " + m.model.publisher : "")],
      ["Works offline", "Yes, after download"]].forEach(function(f){
       var d = document.createElement("div");
       var dt = document.createElement("dt"); dt.textContent = f[0];
@@ -2341,6 +2341,12 @@ function paintAIScreen(){
     });
   }
   var installed = aiInstalled() && !!m;
+  var prev = lsGet(LS_AI);
+  var swapped = !!(m && prev && prev !== installedKey(m));
+  var why = document.querySelector("#screen-ai .why");
+  why.textContent = swapped
+    ? "This site now uses a different model (" + (m.model.name || m.model.id) + "). Download it to keep using Supercharged \u2014 the old one will be removed from this device."
+    : "Adds a small AI model that runs on this device. It helps with the parts rules can't do well, and still works with no internet once it's downloaded.";
   var dl = document.getElementById("ai-download");
   document.getElementById("ai-remove").hidden = !installed || AI.busy;
   document.getElementById("ai-cancel").hidden = !AI.busy;
@@ -2441,7 +2447,13 @@ function aiInstall(){
   if (!m || AI.busy) return;
   AI.busy = true; aiError(""); paintAIScreen();
   AI.abort = window.AbortController ? new AbortController() : null;
-  aiDownload(m, AI.abort && AI.abort.signal).then(function(cache){
+  /* A different model installed earlier: clear it out first so storage isn't used twice. */
+  var prevKey = lsGet(LS_AI);
+  var clearOld = (prevKey && prevKey !== installedKey(m))
+    ? Promise.all(["webllm/model", "webllm/config", "webllm/wasm", AI_CACHE].map(function(n){ return caches.delete(n); }))
+        .then(function(){ lsSet(LS_AI, null); AI.engine = null; })
+    : Promise.resolve();
+  clearOld.then(function(){ return aiDownload(m, AI.abort && AI.abort.signal); }).then(function(cache){
     aiSetProgress(0.85, "All files checked. Setting up the model on this device…");
     return aiStartEngine(m, function(r){
       aiSetProgress(0.85 + 0.15 * (r.progress || 0), "Setting up the model on this device…");

@@ -9,7 +9,7 @@
 //      the app checks each download against before anything is used.
 //
 // Usage: node tools/prepare-model.mjs <site-dir>
-// Env:   MODEL_ID     WebLLM prebuilt model id (default below)
+// Env:   MODEL_ID     WebLLM prebuilt model id (default: "model" in supercharged.json)
 //        MODEL_CACHE  folder reused between builds (default .model-cache)
 
 import fs from "node:fs/promises";
@@ -20,8 +20,22 @@ import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { createRequire } from "node:module";
 
-const DEFAULT_MODEL = "Qwen2.5-0.5B-Instruct-q4f16_1-MLC";
-const MODEL_ID = (process.env.MODEL_ID || DEFAULT_MODEL).trim();
+let configured = "Qwen2.5-0.5B-Instruct-q4f16_1-MLC";
+try { configured = JSON.parse(await fs.readFile("supercharged.json", "utf8")).model || configured; } catch { /* default */ }
+const MODEL_ID = (process.env.MODEL_ID || configured).trim();
+
+// Who made each model, shown to people before they download it.
+const PUBLISHERS = [
+  [/^Qwen/i, "Alibaba Qwen team (China)"],
+  [/^SmolLM/i, "Hugging Face (France/US)"],
+  [/^Llama/i, "Meta (US)"],
+  [/^gemma/i, "Google (US)"],
+  [/^Phi/i, "Microsoft (US)"],
+  [/^(Mistral|Ministral)/i, "Mistral AI (France)"],
+];
+const publisher = (PUBLISHERS.find(([re]) => re.test(MODEL_ID)) || [null, "see source"])[1];
+// GitHub Pages publishes at most 1 GB per site; stop the build well before that.
+const PAGES_LIMIT = 1000 * 1024 * 1024;
 const SITE = path.resolve(process.argv[2] || "_site");
 const CACHE = path.resolve(process.env.MODEL_CACHE || ".model-cache");
 const require = createRequire(import.meta.url);
@@ -132,6 +146,7 @@ const manifest = {
   model: {
     id: MODEL_ID,
     name: MODEL_ID.replace(/-q\w+-MLC$/, "").replace(/-/g, " "),
+    publisher,
     source: `https://huggingface.co/${repo}`,
     license,
     record: published,
@@ -139,5 +154,8 @@ const manifest = {
   totalBytes: files.reduce((n, f) => n + f.size, 0),
   files,
 };
+if (manifest.totalBytes > PAGES_LIMIT * 0.95) {
+  throw new Error(`${MODEL_ID} needs ${(manifest.totalBytes / 1048576).toFixed(0)} MB, too close to GitHub Pages' 1 GB site limit. Choose a smaller model in supercharged.json.`);
+}
 await fs.writeFile(path.join(SITE, "models", "manifest.json"), JSON.stringify(manifest, null, 2));
 log(`published ${files.length} files, ${(manifest.totalBytes / 1048576).toFixed(0)} MB`);

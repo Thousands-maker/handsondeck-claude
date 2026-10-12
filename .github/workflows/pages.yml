@@ -5,16 +5,12 @@ name: Publish site
 # site, so people using the app only ever download from this site.
 #
 # One-time setting: Settings -> Pages -> Build and deployment -> Source: GitHub Actions.
+# To swap the model, edit "model" in supercharged.json and commit.
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
-    inputs:
-      model_id:
-        description: "WebLLM model id for Supercharged mode"
-        required: false
-        default: "Qwen2.5-0.5B-Instruct-q4f16_1-MLC"
 
 permissions:
   contents: read
@@ -25,9 +21,6 @@ concurrency:
   group: pages
   cancel-in-progress: false
 
-env:
-  MODEL_ID: ${{ github.event.inputs.model_id || 'Qwen2.5-0.5B-Instruct-q4f16_1-MLC' }}
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -37,6 +30,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+
+      - name: Read the chosen model
+        run: echo "MODEL_ID=$(node -p "require('./supercharged.json').model")" >> "$GITHUB_ENV"
 
       - name: Install the engine and bundler (build time only)
         run: npm install --no-save --no-package-lock --no-audit --no-fund @mlc-ai/web-llm@0.2 esbuild@0.25

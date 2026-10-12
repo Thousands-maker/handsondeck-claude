@@ -1,0 +1,12 @@
+{
+  "model": "Qwen2.5-0.5B-Instruct-q4f16_1-MLC",
+
+  "_how_to_swap": "Change \"model\" above to one of the ids below, commit, and the site rebuilds with that model. People who installed the old one are asked to download the new one; the old one is removed from their device.",
+
+  "_options": {
+    "Qwen2.5-0.5B-Instruct-q4f16_1-MLC": "Alibaba Qwen (China) · Apache 2.0 · ~300-400 MB · phones and laptops",
+    "SmolLM2-360M-Instruct-q4f16_1-MLC": "Hugging Face (France/US) · Apache 2.0, open training data · ~250 MB · phones and laptops, weakest",
+    "SmolLM2-1.7B-Instruct-q4f16_1-MLC": "Hugging Face (France/US) · Apache 2.0, open training data · ~1 GB · laptops; close to the GitHub Pages size limit",
+    "Llama-3.2-1B-Instruct-q4f16_1-MLC": "Meta (US) · Llama 3.2 community licence · ~700 MB · laptops and newer phones"
+  }
+}

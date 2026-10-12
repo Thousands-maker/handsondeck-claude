@@ -140,8 +140,28 @@ aren't added to the home screen. GitHub Pages also has a soft bandwidth limit of
 `.github/workflows/pages.yml` builds and publishes the site on every push to `main`.
 GitHub's servers install the engine, bundle it into `vendor/web-llm.js`, download the
 model weights and runtime (checking them against the model host's own SHA-256 where it
-publishes one), and write the manifest — `tools/prepare-model.mjs` does the work. To pick
-a different model, run the workflow by hand and give a WebLLM model id.
+publishes one), and write the manifest — `tools/prepare-model.mjs` does the work.
+
+### Swapping the model
+
+The model is set in one place: `"model"` in [`supercharged.json`](supercharged.json).
+Change it to another WebLLM model id and commit — on GitHub's website is fine — and the
+site rebuilds with that model. The file lists tested options with who made each, its
+licence and rough size:
+
+| Model id | From | Licence | Size | Notes |
+| --- | --- | --- | --- | --- |
+| `Qwen2.5-0.5B-Instruct-q4f16_1-MLC` | Alibaba Qwen (China) | Apache 2.0 | ~300–400 MB | current default |
+| `SmolLM2-360M-Instruct-q4f16_1-MLC` | Hugging Face (France/US) | Apache 2.0, open training data | ~250 MB | most transparent, weakest |
+| `SmolLM2-1.7B-Instruct-q4f16_1-MLC` | Hugging Face (France/US) | Apache 2.0, open training data | ~1 GB | most transparent; laptops; near the Pages limit |
+| `Llama-3.2-1B-Instruct-q4f16_1-MLC` | Meta (US) | Llama 3.2 community licence | ~700 MB | laptops and newer phones |
+
+The build stops with a clear message if the id isn't one WebLLM packages (listing small
+ones that are) or if the model would take the site past GitHub Pages' 1 GB limit. The
+Supercharged screen shows each model's publisher before anyone downloads it. When the
+model changes, people who installed the old one fall back to Standard, are told the site
+now uses a different model, and the old one is removed from their device when they
+download the new one.
 
 One-time setting: **Settings → Pages → Build and deployment → Source: GitHub Actions.**
 
