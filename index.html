@@ -224,6 +224,21 @@
   .check.ai{background:#fbf3e2; color:#6d4a00}
   .check.ai::before{background:#d39b1b}
   .stepnav{display:flex; align-items:center; gap:10px; margin-top:26px; flex-wrap:wrap}
+  #screen-guide .step{scroll-margin-top:84px}
+  #screen-guide .stepnav{margin:16px 0 22px}
+  .stepsum{display:grid; grid-template-columns:auto 1fr auto; grid-template-areas:"num q e" "num a e";
+    column-gap:12px; row-gap:2px; align-items:center; width:100%; text-align:left; margin:0 0 10px;
+    background:var(--paper); color:var(--ink); border:1px solid var(--rule); border-radius:var(--radius);
+    padding:12px 16px; font-weight:400; box-shadow:var(--shadow)}
+  .stepsum:hover{background:var(--paper); border-color:var(--primary)}
+  .stepsum .num{grid-area:num; display:grid; place-items:center; width:24px; height:24px; border-radius:50%;
+    background:var(--accent); color:#fff; font-size:12px; font-weight:700}
+  .stepsum .num::before{content:"\2713"; position:absolute; opacity:0}
+  .stepsum .sq{grid-area:q; font-size:12.5px; font-weight:600; color:var(--muted)}
+  .stepsum .sa{grid-area:a; font-size:14.5px; color:var(--ink); overflow:hidden; text-overflow:ellipsis;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical}
+  .stepsum .sa.empty{color:var(--muted); font-style:italic}
+  .stepsum .se{grid-area:e; font-size:13.5px; font-weight:600; color:var(--primary)}
   .stepnav .spacer{flex:1}
   .field-error{color:var(--bad); font-size:13.5px; margin-top:8px}
   .guide-foot{display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-top:16px;
@@ -2016,26 +2031,88 @@ function validStep(n){
   return true;
 }
 
+/* Answered steps stay on screen as short summaries, stacked in order around the step
+   being worked on, so earlier answers are always visible and any of them can be
+   reopened and changed before the deck is built. */
+var furthest = 1;
+
+function stepSummary(n){
+  function val(id){ return document.getElementById(id).value.trim(); }
+  if (n === 1) return val("g-audience") || "";
+  if (n === 2) return val("g-purpose") || "";
+  if (n === 3){
+    var heads = beats.map(function(b){ return b.headline.trim(); }).filter(Boolean);
+    if (heads.length) return heads.length + (heads.length === 1 ? " point: " : " points: ") +
+      heads.slice(0, 3).join(" \u00B7 ") + (heads.length > 3 ? " \u2026" : "");
+    var ft = val("g-freetext");
+    return ft ? "Written, not sorted yet: \u201C" + ft.slice(0, 90) + (ft.length > 90 ? "\u2026" : "") + "\u201D" : "";
+  }
+  if (n === 4){
+    var names = { operational: "Operational", executive: "Executive", workshop: "Workshop" };
+    var t = val("g-title");
+    return names[guidedStyle()] + " style" + (t ? " \u00B7 \u201C" + t + "\u201D" : "");
+  }
+  return "";
+}
+
+function paintSummaries(){
+  var secs = document.querySelectorAll("#screen-guide .step[data-step]");
+  for (var i = 0; i < secs.length; i++){
+    var sec = secs[i], n = +sec.getAttribute("data-step");
+    var sum = document.getElementById("g-sum-" + n);
+    if (!sum){
+      sum = document.createElement("button");
+      sum.type = "button"; sum.className = "stepsum"; sum.id = "g-sum-" + n;
+      sum.innerHTML = '<span class="num"></span><span class="sq"></span><span class="sa"></span><span class="se">Edit</span>';
+      sum.querySelector(".num").textContent = String(n);
+      sum.querySelector(".sq").textContent = sec.querySelector("h2").textContent;
+      (function(k){ sum.addEventListener("click", function(){ goStep(k); }); })(n);
+      sec.parentNode.insertBefore(sum, sec);
+    }
+    var show = n < STEPS && n !== step && n <= furthest;
+    sum.hidden = !show;
+    if (show){
+      var a = stepSummary(n);
+      var sa = sum.querySelector(".sa");
+      sa.textContent = a || "Not answered \u2014 that's fine";
+      sa.classList.toggle("empty", !a);
+      sum.setAttribute("aria-label", "Edit step " + n + ": " + sum.querySelector(".sq").textContent);
+    }
+  }
+}
+
 function goStep(n){
   step = Math.max(1, Math.min(STEPS, n));
-  var secs = document.querySelectorAll("#screen-guide .step");
+  if (step > furthest) furthest = step;
+  var secs = document.querySelectorAll("#screen-guide .step[data-step]");
   for (var i = 0; i < secs.length; i++) secs[i].hidden = (+secs[i].getAttribute("data-step") !== step);
-  document.getElementById("g-fill").style.width = (step / STEPS * 100) + "%";
-  document.getElementById("g-label").textContent = "Step " + step + " of " + STEPS;
+  paintSummaries();
+  document.getElementById("g-fill").style.width = (furthest / STEPS * 100) + "%";
+  document.getElementById("g-label").textContent = step === furthest
+    ? "Step " + step + " of " + STEPS : "Editing step " + step + " of " + STEPS;
   document.getElementById("g-back").textContent = step === 1 ? "Back to start" : "Back";
-  document.getElementById("g-next").textContent = step === STEPS ? "Build my deck" : "Next";
+  document.getElementById("g-next").textContent = step === STEPS ? "Build my deck"
+    : (step < furthest ? "Done \u2014 back to step " + furthest : "Next");
   if (step === STEPS) renderReview();
   var sec = document.querySelector('#screen-guide .step[data-step="' + step + '"]');
+  /* Keep Back/Next right under the step being worked on. */
+  var nav = document.querySelector("#screen-guide .stepnav");
+  sec.parentNode.insertBefore(nav, sec.nextSibling);
   var first = step === 3
     ? (document.getElementById("g-free").hidden ? document.getElementById("g-beat-0") : document.getElementById("g-freetext"))
     : sec.querySelector("input[type=text], textarea");
-  if (first && step !== STEPS) first.focus(); else sec.querySelector("h2").focus();
-  window.scrollTo(0, 0);
+  if (first && step !== STEPS) first.focus({ preventScroll: true }); else sec.querySelector("h2").focus({ preventScroll: true });
+  if (step === 1 && furthest === 1) window.scrollTo(0, 0);
+  else if (sec.scrollIntoView) sec.scrollIntoView({ block: "start" });
 }
 
 function startGuide(){
   guidedFromBrief();
   showScreen("guide");
+  /* Coming back with answers already in place: show them all as answered. */
+  var answered = document.getElementById("g-audience").value.trim() || document.getElementById("g-purpose").value.trim() ||
+    beats.some(function(b){ return b.headline.trim(); });
+  furthest = answered ? STEPS : 1;
   goStep(1);
 }
 
@@ -2046,8 +2123,14 @@ function finishGuide(){
 }
 
 document.getElementById("g-next").addEventListener("click", function(){
+  if (step === STEPS && !beats.some(function(b){ return b.headline.trim(); })){
+    goStep(3);                       /* nothing to build from yet: go back to what happened */
+    validStep(3);
+    return;
+  }
   if (!validStep(step)) return;
-  if (step === STEPS) finishGuide(); else goStep(step + 1);
+  if (step === STEPS) finishGuide();
+  else goStep(step < furthest ? furthest : step + 1);
 });
 document.getElementById("g-back").addEventListener("click", function(){
   if (step === 1) showScreen("welcome"); else goStep(step - 1);
