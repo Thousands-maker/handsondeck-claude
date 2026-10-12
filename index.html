@@ -10,83 +10,254 @@
 <title>HandsOnDeck — plain-language brief to HTML slides</title>
 <style>
   :root{
-    --ink:#14161a; --muted:#5b6270; --paper:#fff; --surface:#f2f3f6;
-    --rule:#d6dae1; --primary:#4b2e83; --accent:#00a3ad;
-    --warn:#8a5a00; --warn-bg:#fdf6e6;
+    --ink:#16171d; --ink-2:#3b3f4a; --muted:#646b78; --paper:#fff; --surface:#f5f4f8;
+    --surface-2:#ece9f3; --rule:#dfdce7; --rule-strong:#c9c4d6;
+    --primary:#4b2e83; --primary-ink:#3a2266; --primary-soft:#efeaf8;
+    --accent:#00838c; --accent-soft:#e6f4f5;
+    --warn:#8a5a00; --warn-bg:#fdf6e6; --bad:#9a2b2b; --bad-bg:#fdeeee;
+    --radius:10px; --radius-sm:6px;
+    --shadow:0 1px 2px rgba(22,23,29,.05), 0 2px 8px rgba(22,23,29,.05);
+    --shadow-lift:0 2px 4px rgba(22,23,29,.06), 0 10px 28px rgba(75,46,131,.12);
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0}
   body{font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;
-       color:var(--ink); background:var(--surface); font-size:15px; line-height:1.5}
-  header.app{background:var(--primary); color:#fff; padding:14px 22px;
-             display:flex; align-items:baseline; gap:14px; flex-wrap:wrap}
-  header.app h1{font-size:17px; margin:0; font-weight:600}
-  header.app p{margin:0; font-size:13px; color:#cfc6e4}
-  .wrap{display:flex; gap:18px; padding:18px; align-items:flex-start; flex-wrap:wrap}
-  .panel{background:var(--paper); border:1px solid var(--rule); border-radius:4px}
-  .brief{flex:0 0 400px; max-width:100%; padding:18px}
-  .output{flex:1 1 520px; min-width:340px; padding:0; overflow:hidden}
-  h2{font-size:13px; font-weight:600; margin:0 0 12px; color:var(--muted)}
-  label{display:block; font-size:13px; font-weight:600; margin:14px 0 4px}
-  label:first-of-type{margin-top:0}
-  .hint{font-weight:400; color:var(--muted); font-size:12px; display:block; margin-top:2px}
-  input[type=text], textarea, select{width:100%; padding:8px 9px; border:1px solid var(--rule);
-    border-radius:3px; font:inherit; font-size:14px; color:var(--ink); background:var(--paper)}
-  textarea{min-height:170px; resize:vertical; line-height:1.55}
-  input:focus, textarea:focus, select:focus{outline:2px solid var(--accent); outline-offset:1px;
-    border-color:var(--accent)}
-  .actions{margin-top:18px; display:flex; gap:8px; flex-wrap:wrap}
-  button{font:inherit; font-size:14px; padding:9px 15px; border-radius:3px; cursor:pointer;
-    border:1px solid var(--primary); background:var(--primary); color:#fff}
-  button.secondary{background:var(--paper); color:var(--primary)}
-  button.danger{background:var(--paper); color:#9a2b2b; border-color:#d9b3b3}
+       color:var(--ink); background:var(--surface); font-size:15px; line-height:1.55;
+       -webkit-font-smoothing:antialiased}
+  [hidden]{display:none !important}
+  .vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+  /* ---------- header ---------- */
+  header.app{position:sticky; top:0; z-index:20; background:var(--primary); color:#fff;
+    padding:0 22px; height:56px; display:flex; align-items:center; gap:18px}
+  .brand{display:flex; align-items:center; gap:10px; background:none; border:0; color:#fff;
+    padding:0; font:inherit; cursor:pointer}
+  .brand .mark{width:28px; height:28px; border-radius:7px; background:#fff; color:var(--primary);
+    display:grid; place-items:center; font-weight:700; font-size:14px; letter-spacing:-.02em}
+  .brand .name{font-size:16px; font-weight:600; letter-spacing:.005em}
+  nav.crumbs{display:flex; gap:4px; margin-left:8px}
+  nav.crumbs button{background:transparent; border:0; color:#d9d0ee; font:inherit; font-size:13px;
+    font-weight:600; padding:7px 12px; border-radius:999px; cursor:pointer}
+  nav.crumbs button:hover{background:rgba(255,255,255,.1); color:#fff}
+  nav.crumbs button[aria-current="page"]{background:rgba(255,255,255,.18); color:#fff}
+  .pill{margin-left:auto; font-size:12px; padding:5px 11px; border-radius:999px;
+    border:1px solid rgba(255,255,255,.3); color:#ebe5f7; white-space:nowrap;
+    display:inline-flex; align-items:center; gap:7px}
+  .pill .dot{width:7px; height:7px; border-radius:50%; background:#4fd18b; flex:none}
+  .pill[data-net="off"] .dot{background:#ffc453}
+
+  /* ---------- shared controls ---------- */
+  h1,h2,h3{letter-spacing:-.01em}
+  label.field{display:block; font-size:14px; font-weight:600; margin:18px 0 6px; color:var(--ink)}
+  label.field:first-child{margin-top:0}
+  .hint{font-weight:400; color:var(--muted); font-size:13px; display:block; margin-top:2px}
+  input[type=text], textarea, select{width:100%; padding:10px 12px; border:1px solid var(--rule-strong);
+    border-radius:var(--radius-sm); font:inherit; font-size:15px; color:var(--ink); background:var(--paper);
+    transition:border-color .12s, box-shadow .12s}
+  input[type=text]::placeholder, textarea::placeholder{color:#9a9fab}
+  textarea{min-height:120px; resize:vertical; line-height:1.55}
+  input:focus, textarea:focus, select:focus{outline:none; border-color:var(--primary);
+    box-shadow:0 0 0 3px rgba(75,46,131,.18)}
+  button{font:inherit; font-size:14px; font-weight:600; padding:9px 16px; border-radius:var(--radius-sm);
+    cursor:pointer; border:1px solid var(--primary); background:var(--primary); color:#fff;
+    transition:background .12s, border-color .12s, box-shadow .12s}
+  button:hover{background:var(--primary-ink)}
+  button.secondary{background:var(--paper); color:var(--primary); border-color:var(--rule-strong)}
+  button.secondary:hover{border-color:var(--primary); background:var(--primary-soft)}
+  button.ghost{background:transparent; border-color:transparent; color:var(--primary); padding:7px 10px}
+  button.ghost:hover{background:var(--primary-soft)}
+  button.danger{background:var(--paper); color:var(--bad); border-color:#e3c4c4}
+  button.danger:hover{background:var(--bad-bg)}
+  button.big{font-size:15px; padding:12px 22px}
   button:disabled{opacity:.45; cursor:not-allowed}
-  button:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
-  .tabs{display:flex; border-bottom:1px solid var(--rule); background:var(--paper)}
-  .tabs button{background:none; border:none; border-bottom:2px solid transparent;
-    color:var(--muted); border-radius:0; padding:12px 16px; font-size:13px; font-weight:600}
-  .tabs button[aria-selected=true]{color:var(--primary); border-bottom-color:var(--primary)}
-  .tabpanel{padding:18px}
-  .tabpanel[hidden]{display:none}
-  .navbar{display:flex; align-items:center; gap:10px; margin-top:10px; flex-wrap:wrap}
-  .navbar .count{font-size:13px; color:var(--muted); font-variant-numeric:tabular-nums}
-  .navbar .spacer{flex:1}
-  .editnote{font-size:12px; color:var(--muted); margin-top:8px}
-  pre.plan{margin:0; padding:14px; background:#1c1f26; color:#e6e9ef; border-radius:3px;
-    font-family:"Cascadia Mono",Consolas,Menlo,monospace; font-size:12.5px; line-height:1.5;
-    max-height:460px; overflow:auto; white-space:pre}
-  .plancap{font-size:12.5px; color:var(--muted); margin:0 0 10px}
+  button:disabled:hover{background:inherit}
+  button:focus-visible, .filebtn:focus-within, .card:focus-visible{outline:3px solid rgba(0,131,140,.55); outline-offset:2px}
+  .filebtn{font-size:14px; font-weight:600; padding:9px 16px; border-radius:var(--radius-sm); cursor:pointer;
+    border:1px solid var(--rule-strong); background:var(--paper); color:var(--primary); display:inline-block}
+  .filebtn:hover{border-color:var(--primary); background:var(--primary-soft)}
+  .linkbtn{background:none; border:0; padding:0; color:var(--primary); font-weight:600; font-size:14px;
+    text-decoration:underline; text-underline-offset:3px; cursor:pointer}
+  .linkbtn:hover{background:none; color:var(--primary-ink)}
+  code{font-family:"Cascadia Mono",Consolas,Menlo,monospace; font-size:12.5px; background:var(--surface-2);
+    padding:1px 5px; border-radius:4px}
+
+  /* ---------- welcome ---------- */
+  .welcome{max-width:880px; margin:0 auto; padding:64px 22px 48px}
+  .eyebrow{font-size:12px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--accent)}
+  .welcome h1{font-size:40px; line-height:1.12; margin:10px 0 14px; font-weight:650; max-width:18ch}
+  .welcome .lede{font-size:18px; color:var(--ink-2); max-width:56ch; margin:0 0 36px}
+  .paths{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+  .card{display:flex; flex-direction:column; align-items:flex-start; text-align:left; gap:8px;
+    background:var(--paper); color:var(--ink); border:1px solid var(--rule); border-radius:var(--radius);
+    padding:22px 22px 20px; box-shadow:var(--shadow); cursor:pointer; font-weight:400;
+    transition:border-color .15s, box-shadow .15s, transform .15s}
+  .card:hover{background:var(--paper); border-color:var(--primary); box-shadow:var(--shadow-lift); transform:translateY(-1px)}
+  .card .tag{font-size:12px; font-weight:700; color:var(--primary); background:var(--primary-soft);
+    padding:3px 9px; border-radius:999px}
+  .card.recommended{border-color:#cbbfe3}
+  .card h2{font-size:20px; margin:4px 0 0; font-weight:650}
+  .card p{margin:0; color:var(--ink-2); font-size:15px}
+  .card .go{margin-top:auto; padding-top:10px; font-weight:600; color:var(--primary); font-size:14px}
+  .alt{display:flex; flex-wrap:wrap; gap:10px 22px; align-items:center; margin-top:26px;
+    color:var(--muted); font-size:14px}
+  .how{margin-top:56px; display:grid; grid-template-columns:repeat(3,1fr); gap:16px;
+    border-top:1px solid var(--rule); padding-top:28px}
+  .how div{font-size:14px; color:var(--ink-2)}
+  .how b{display:block; color:var(--ink); font-size:14px; margin-bottom:3px}
+  .how .n{display:inline-grid; place-items:center; width:22px; height:22px; border-radius:50%;
+    background:var(--surface-2); color:var(--primary); font-size:12px; font-weight:700; margin-bottom:8px}
+
+  /* ---------- guided journey ---------- */
+  .guide{max-width:720px; margin:0 auto; padding:36px 22px 64px}
+  .progress{display:flex; align-items:center; gap:14px; margin-bottom:28px}
+  .progress .bar{flex:1; height:6px; background:var(--surface-2); border-radius:999px; overflow:hidden}
+  .progress .fill{height:100%; background:var(--primary); border-radius:999px; transition:width .25s ease}
+  .progress .label{font-size:13px; color:var(--muted); font-weight:600; white-space:nowrap;
+    font-variant-numeric:tabular-nums}
+  .step{background:var(--paper); border:1px solid var(--rule); border-radius:var(--radius);
+    padding:32px; box-shadow:var(--shadow)}
+  .step h2{font-size:26px; line-height:1.2; margin:0 0 6px; font-weight:650; outline:none}
+  .step .why{color:var(--ink-2); margin:0 0 22px; font-size:15.5px; max-width:58ch}
+  .chips{display:flex; flex-wrap:wrap; gap:8px; margin-top:12px}
+  .chips button{background:var(--paper); color:var(--ink-2); border:1px solid var(--rule-strong);
+    border-radius:999px; font-weight:500; font-size:13.5px; padding:6px 13px}
+  .chips button:hover{border-color:var(--primary); color:var(--primary); background:var(--primary-soft)}
+  .beat{border:1px solid var(--rule); border-radius:var(--radius-sm); padding:16px 16px 14px;
+    margin-bottom:12px; background:#fcfbfe; position:relative}
+  .beat .q{display:flex; align-items:baseline; gap:10px; font-size:14.5px; font-weight:600; margin:0 0 8px}
+  .beat .q .num{flex:none; display:inline-grid; place-items:center; width:22px; height:22px;
+    border-radius:50%; background:var(--primary); color:#fff; font-size:12px}
+  .beat .q .opt{font-weight:400; color:var(--muted); font-size:13px}
+  .beat textarea{min-height:64px; margin-top:8px; font-size:14px}
+  .beat .remove{position:absolute; top:10px; right:10px}
+  .beat .detail-label{font-size:13px; color:var(--muted); margin-top:10px; display:block}
+  .styles{display:grid; grid-template-columns:repeat(3,1fr); gap:12px}
+  .stylecard{position:relative; display:block; border:1px solid var(--rule-strong); border-radius:var(--radius-sm);
+    padding:12px; cursor:pointer; background:var(--paper)}
+  .stylecard:hover{border-color:var(--primary)}
+  .stylecard input{position:absolute; opacity:0}
+  .stylecard:has(input:checked){border-color:var(--primary); box-shadow:0 0 0 2px var(--primary)}
+  .stylecard:has(input:focus-visible){outline:3px solid rgba(0,131,140,.55); outline-offset:2px}
+  .stylecard .mini{aspect-ratio:16/9; border-radius:4px; margin-bottom:10px; padding:9% 10%;
+    display:flex; flex-direction:column; justify-content:center; gap:5px; background:#fff; border:1px solid var(--rule)}
+  .stylecard .mini i{display:block; height:5px; border-radius:2px; background:#c9cbd3}
+  .stylecard .mini i.h{height:8px; width:70%; background:var(--c)}
+  .stylecard b{display:block; font-size:14px}
+  .stylecard span{display:block; font-size:12.5px; color:var(--muted); line-height:1.4}
+  .review{display:grid; gap:2px; border:1px solid var(--rule); border-radius:var(--radius-sm); overflow:hidden}
+  .review .row{display:grid; grid-template-columns:150px 1fr auto; gap:14px; padding:14px 16px;
+    background:#fcfbfe; align-items:start}
+  .review .row + .row{border-top:1px solid var(--rule)}
+  .review dt{font-size:13px; font-weight:600; color:var(--muted); margin:0}
+  .review dd{margin:0; font-size:14.5px; white-space:pre-line}
+  .review dd.empty{color:var(--muted); font-style:italic}
+  .review ol{margin:0; padding-left:18px}
+  .review ol li{margin-bottom:4px}
+  .review ol ul{margin:2px 0 4px; padding-left:16px; color:var(--ink-2); font-size:13.5px}
+  .outline-note{margin-top:16px; font-size:14px; color:var(--ink-2); background:var(--accent-soft);
+    border-radius:var(--radius-sm); padding:11px 14px}
+  .stepnav{display:flex; align-items:center; gap:10px; margin-top:26px}
+  .stepnav .spacer{flex:1}
+  .field-error{color:var(--bad); font-size:13.5px; margin-top:8px}
+  .guide-foot{display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-top:16px;
+    font-size:13.5px; color:var(--muted)}
+
+  /* ---------- workspace ---------- */
+  .wrap{display:grid; grid-template-columns:minmax(320px,400px) minmax(0,1fr); gap:20px;
+    padding:20px; align-items:start; max-width:1500px; margin:0 auto}
+  .panel{background:var(--paper); border:1px solid var(--rule); border-radius:var(--radius); box-shadow:var(--shadow)}
+  .brief{padding:20px; position:sticky; top:76px; max-height:calc(100vh - 96px); overflow:auto}
+  .panelhead{display:flex; align-items:center; gap:8px; margin:0 0 16px}
+  .panelhead h2{font-size:16px; margin:0; font-weight:650}
+  .panelhead .spacer{flex:1}
+  .counter{font-size:12.5px; color:var(--muted); margin-top:6px; font-variant-numeric:tabular-nums}
+  .actions{position:sticky; bottom:-20px; margin:20px -20px -20px; padding:14px 20px 20px;
+    background:linear-gradient(to bottom, rgba(255,255,255,.92), #fff 30%); border-top:1px solid var(--rule);
+    display:flex; gap:8px; flex-wrap:wrap; align-items:center; z-index:2}
+  .actions .primary-action{flex:1}
   .warn{background:var(--warn-bg); border-left:3px solid var(--warn); color:var(--warn);
-    padding:9px 11px; border-radius:0 3px 3px 0; font-size:13px; margin-bottom:7px}
-  .warnings{margin-top:7px}
+    padding:9px 12px; border-radius:0 var(--radius-sm) var(--radius-sm) 0; font-size:13.5px; margin-top:8px}
   .warnings:empty{display:none}
-  .empty{color:var(--muted); font-size:14px; padding:40px 0; text-align:center}
-  .sync{display:none; margin-top:7px; font-size:13px; padding:9px 11px; border-radius:3px;
-    background:#eef7f8; border-left:3px solid var(--accent)}
+  .sync{margin-top:12px; font-size:13px; padding:9px 12px; border-radius:var(--radius-sm);
+    background:var(--accent-soft); color:#0d5157; display:none}
   .sync.on{display:block}
-  .version{font-size:12px; color:var(--muted); margin:7px 0 0}
-  .version:empty{display:none}
-  .feedback:not(:empty){margin-bottom:16px}
-  .check{font-size:12.5px; padding:9px 11px; border-radius:0 3px 3px 0}
+  details.more{margin-top:16px; font-size:13.5px; color:var(--ink-2)}
+  details.more summary{cursor:pointer; color:var(--primary); font-weight:600}
+  details.more p{margin:8px 0 0}
+
+  .output{overflow:hidden; min-width:0}
+  .outhead{display:flex; align-items:center; gap:8px; border-bottom:1px solid var(--rule); padding:0 12px 0 4px;
+    flex-wrap:wrap}
+  .tabs{display:flex}
+  .tabs button{background:none; border:none; border-bottom:2px solid transparent; color:var(--muted);
+    border-radius:0; padding:15px 14px 13px; font-size:14px; font-weight:600}
+  .tabs button:hover{background:none; color:var(--ink)}
+  .tabs button[aria-selected=true]{color:var(--primary); border-bottom-color:var(--primary)}
+  .outhead .spacer{flex:1}
+  .outhead .exports{display:flex; gap:8px; padding:8px 0}
+  .statusrow{display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; padding:12px 18px 0}
+  .check{font-size:13px; padding:6px 11px; border-radius:999px; display:inline-flex; gap:7px; align-items:center}
   .check:empty{display:none}
-  .check.good{background:#eef7f8; border-left:3px solid var(--accent); color:#12545a}
-  .check.bad{background:#fdecec; border-left:3px solid #9a2b2b; color:#7a2222}
-  .chatlog{border:1px solid var(--rule); border-radius:3px; height:300px; overflow:auto;
-    padding:12px; background:var(--paper); font-size:13.5px; line-height:1.5}
+  .check::before{content:""; width:8px; height:8px; border-radius:50%; flex:none}
+  .check.good{background:var(--accent-soft); color:#0d5157}
+  .check.good::before{background:var(--accent)}
+  .check.bad{background:var(--bad-bg); color:#7a2222}
+  .check.bad::before{background:var(--bad)}
+  .version{font-size:13px; color:var(--muted); margin:0}
+  .version:empty{display:none}
+  .tabpanel{padding:16px 18px 20px}
+  .navbar{display:flex; align-items:center; gap:8px; margin-top:12px; flex-wrap:wrap}
+  .navbar .count{font-size:13.5px; color:var(--ink-2); font-variant-numeric:tabular-nums; font-weight:600}
+  .navbar .timing{font-size:12.5px; color:var(--muted)}
+  .navbar .spacer{flex:1}
+  .iconbtn{padding:8px 12px; min-width:40px}
+  .strip{display:flex; gap:8px; overflow-x:auto; padding:12px 2px 4px; scrollbar-width:thin}
+  .strip button{flex:0 0 132px; height:74px; text-align:left; background:var(--paper); color:var(--ink-2);
+    border:1px solid var(--rule); border-radius:6px; padding:8px 9px; font-weight:500; font-size:11.5px;
+    line-height:1.3; display:flex; flex-direction:column; gap:3px; overflow:hidden; position:relative}
+  .strip button:hover{border-color:var(--primary); background:var(--paper)}
+  .strip button .sn{font-size:10.5px; font-weight:700; color:var(--muted)}
+  .strip button .st{display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden}
+  .strip button.title{background:var(--saccent,var(--primary)); color:#fff; border-color:transparent}
+  .strip button.title .sn{color:rgba(255,255,255,.75)}
+  .strip button[aria-current="true"]{box-shadow:0 0 0 2px var(--primary); border-color:var(--primary)}
+  .editnote{font-size:13px; color:var(--muted); margin:12px 0 0}
+  .empty{text-align:center; padding:56px 20px 64px; color:var(--ink-2)}
+  .empty .frame{width:min(360px,80%); aspect-ratio:16/9; margin:0 auto 22px; border:2px dashed var(--rule-strong);
+    border-radius:8px; display:grid; place-items:center; color:var(--muted); font-size:13px}
+  .empty h3{font-size:18px; margin:0 0 6px; color:var(--ink)}
+  .empty p{margin:0 auto; max-width:44ch; font-size:14.5px}
+  pre.plan{margin:0; padding:14px; background:#1c1d26; color:#e6e7ef; border-radius:var(--radius-sm);
+    font-family:"Cascadia Mono",Consolas,Menlo,monospace; font-size:12.5px; line-height:1.5;
+    max-height:520px; overflow:auto; white-space:pre}
+  .plancap{font-size:13.5px; color:var(--ink-2); margin:0 0 12px; max-width:72ch}
+  .chatlog{border:1px solid var(--rule); border-radius:var(--radius-sm); height:320px; overflow:auto;
+    padding:14px; background:#fcfbfe; font-size:14px; line-height:1.5}
+  .chatlog:empty::before{content:"Type a command below, or pick one of the examples."; color:var(--muted); font-size:13.5px}
   .msg{margin-bottom:10px; max-width:82%}
   .msg .who{font-size:11px; font-weight:600; color:var(--muted); display:block; margin-bottom:2px}
-  .msg.user{margin-left:auto}
-  .msg.user .bubble{background:var(--primary); color:#fff}
-  .msg .bubble{display:inline-block; padding:8px 11px; border-radius:3px; background:var(--surface)}
-  .msg.err .bubble{background:#fdecec; color:#7a2222}
+  .msg.user{margin-left:auto; text-align:right}
+  .msg.user .bubble{background:var(--primary); color:#fff; text-align:left}
+  .msg .bubble{display:inline-block; padding:8px 12px; border-radius:10px; background:var(--surface-2)}
+  .msg.err .bubble{background:var(--bad-bg); color:#7a2222}
   .chatbar{display:flex; gap:8px; margin-top:10px}
   .chatbar input{flex:1}
-  code{font-family:"Cascadia Mono",Consolas,monospace; font-size:12px; background:var(--surface);
-    padding:1px 4px; border-radius:2px}
+  .examples{display:flex; flex-wrap:wrap; gap:6px; margin-top:10px}
+  .examples button{background:var(--paper); color:var(--ink-2); border:1px solid var(--rule-strong);
+    border-radius:999px; font-weight:500; font-size:12.5px; padding:5px 11px; font-family:"Cascadia Mono",Consolas,Menlo,monospace}
+  .examples button:hover{border-color:var(--primary); color:var(--primary); background:var(--primary-soft)}
+
+  /* toast — replaces blocking dialogs */
+  #notice{position:fixed; left:50%; bottom:24px; transform:translateX(-50%); z-index:50;
+    background:#1f1b2b; color:#fff; padding:11px 14px 11px 16px; border-radius:var(--radius-sm);
+    font-size:14px; box-shadow:0 8px 28px rgba(0,0,0,.25); display:flex; align-items:center; gap:14px;
+    max-width:min(560px, calc(100vw - 32px))}
+  #notice button{background:transparent; border:1px solid rgba(255,255,255,.35); color:#fff; padding:5px 11px; font-size:13px}
+  #notice button:hover{background:rgba(255,255,255,.1)}
 
   /* slide stage: rendered in this document, no iframe */
   #stage-outer{position:relative; width:100%; aspect-ratio:16/9; overflow:hidden;
-    background:#fff; border:1px solid var(--rule); border-radius:3px}
+    background:#fff; border:1px solid var(--rule); border-radius:8px; box-shadow:var(--shadow)}
   #stage{position:absolute; top:0; left:0; width:1280px; height:720px;
     transform-origin:top left; background:#fff}
   #stage .slide{display:none; width:1280px; height:720px; padding:72px 92px;
@@ -104,141 +275,292 @@
   #stage ul{margin:0; padding-left:22px}
   #stage li{font-size:var(--sbody); line-height:var(--slead); margin-bottom:var(--sgap);
     max-width:52ch}
+  #stage [contenteditable]:hover{outline:1px dashed rgba(0,131,140,.5); outline-offset:3px; border-radius:2px}
   #stage [contenteditable]:focus{outline:2px solid #00a3ad; outline-offset:3px; border-radius:2px}
-  .pill{margin-left:auto; font-size:12px; padding:4px 10px; border-radius:999px;
-    border:1px solid rgba(255,255,255,.35); color:#e8e2f5; white-space:nowrap;
-    display:inline-flex; align-items:center; gap:7px}
-  .pill .dot{width:7px; height:7px; border-radius:50%; background:#4fd18b; flex:none}
-  .pill[data-net="off"] .dot{background:#ffc453}
-  .filebtn{font:inherit; font-size:14px; padding:9px 15px; border-radius:3px; cursor:pointer;
-    border:1px solid var(--primary); background:var(--paper); color:var(--primary);
-    display:inline-block; margin:0}
-  .filebtn:hover{background:var(--surface)}
-  #notice{margin-bottom:7px}
-  #notice[hidden]{display:none}
-  @media (max-width:900px){ .brief{flex:1 1 100%} .pill{margin-left:0} }
+
+  @media (max-width:980px){
+    .wrap{grid-template-columns:1fr}
+    .brief{position:static; max-height:none}
+  }
+  @media (max-width:720px){
+    header.app{padding:0 14px; gap:10px}
+    nav.crumbs{display:none}
+    .pill{font-size:11px}
+    .welcome{padding:36px 16px 40px}
+    .welcome h1{font-size:30px}
+    .welcome .lede{font-size:16px}
+    .paths, .how{grid-template-columns:1fr}
+    .alt span{display:none}
+    .guide{padding:22px 16px 48px}
+    .step{padding:22px 18px}
+    .step h2{font-size:22px}
+    .styles{grid-template-columns:1fr}
+    .review .row{grid-template-columns:1fr auto}
+    .review dt{grid-column:1 / -1}
+    .wrap{padding:12px; gap:12px}
+  }
+  @media (prefers-reduced-motion:reduce){ *{transition:none !important} }
 </style>
 </head>
 <body>
 
 <header class="app">
-  <h1>HandsOnDeck</h1>
-  <p>Describe the briefing you need. Get real HTML slides you can refine and send.</p>
+  <button class="brand" id="nav-home" type="button" aria-label="HandsOnDeck — back to start">
+    <span class="mark" aria-hidden="true">H</span><span class="name">HandsOnDeck</span>
+  </button>
+  <nav class="crumbs" aria-label="Where you are">
+    <button type="button" id="crumb-welcome" aria-current="page">Start</button>
+    <button type="button" id="crumb-guide">Guided</button>
+    <button type="button" id="crumb-work">Brief &amp; deck</button>
+  </nav>
   <span class="pill" id="netpill" data-net="on" title="All generation runs in this browser. Nothing is sent anywhere.">
     <span class="dot"></span><span id="nettext">Ready &mdash; runs offline</span>
   </span>
 </header>
 
-<div class="wrap">
+<input type="file" id="f-open" accept=".html,.json" class="vh" tabindex="-1">
 
-  <section class="panel brief">
-    <h2>The brief</h2>
+<!-- ================= start ================= -->
+<main id="screen-welcome" class="welcome">
+  <div class="eyebrow">Briefing slides, without the blank page</div>
+  <h1>What do you need to present?</h1>
+  <p class="lede">Start from what happened. HandsOnDeck turns it into real slides you can edit,
+    version and send — and nothing you type leaves this browser.</p>
 
-    <div class="feedback">
-      <div class="warn" id="notice" hidden></div>
-      <div class="check" id="content-check"></div>
-      <div class="warnings" id="warnings"></div>
-      <div class="sync" id="sync-note">
-        Slide edits have been written back into the brief below. Regenerating will keep them.
-      </div>
-      <p class="version" id="version-note"></p>
+  <div class="paths">
+    <button type="button" class="card recommended" id="path-guide">
+      <span class="tag">Guided · about 3 minutes</span>
+      <h2>Walk me through it</h2>
+      <p>Answer five short questions about who it's for, what happened and what you need.
+        Best if you know the story but not how to put it on slides.</p>
+      <span class="go">Start guided &rarr;</span>
+    </button>
+    <button type="button" class="card" id="path-brief">
+      <span class="tag">Direct</span>
+      <h2>I'll write the brief</h2>
+      <p>Go straight to the brief form and the deck. Best if you already know your key
+        messages and want control.</p>
+      <span class="go">Open the brief &rarr;</span>
+    </button>
+  </div>
+
+  <div class="alt">
+    <label class="filebtn" for="f-open" tabindex="0" role="button">Open a deck someone sent back</label>
+    <span>or</span>
+    <button type="button" class="linkbtn" id="btn-try-example">see a finished example first</button>
+  </div>
+
+  <div class="how">
+    <div><span class="n">1</span><b>Tell it plainly</b>Who's in the room, what happened, what you need from them.</div>
+    <div><span class="n">2</span><b>Get real slides</b>Every line on a slide traces back to something you wrote. Nothing is invented.</div>
+    <div><span class="n">3</span><b>Edit and send</b>Click any line to change it, then send a file someone can edit with nothing installed.</div>
+  </div>
+</main>
+
+<!-- ================= guided journey ================= -->
+<main id="screen-guide" class="guide" hidden>
+  <div class="progress" aria-hidden="true">
+    <div class="bar"><div class="fill" id="g-fill" style="width:20%"></div></div>
+    <span class="label" id="g-label">Step 1 of 5</span>
+  </div>
+
+  <section class="step" data-step="1">
+    <h2 tabindex="-1">Who will be in the room?</h2>
+    <p class="why">The people you're presenting to decide how much detail the slides need.</p>
+    <label class="field" for="g-audience">Audience</label>
+    <input type="text" id="g-audience" placeholder="e.g. Divisional directors, mixed technical and operational">
+    <div class="chips" data-target="g-audience" data-mode="replace">
+      <button type="button">My director</button>
+      <button type="button">Senior management</button>
+      <button type="button">Partner agencies</button>
+      <button type="button">My own team</button>
+    </div>
+  </section>
+
+  <section class="step" data-step="2" hidden>
+    <h2 tabindex="-1">What do you need from them by the end?</h2>
+    <p class="why">This becomes the purpose of the deck and the ask on the last slide.
+      If you can't say it in one line, start with one of these and finish the sentence.</p>
+    <label class="field" for="g-purpose">The ask</label>
+    <input type="text" id="g-purpose" placeholder="e.g. Get approval to extend the pilot to two more divisions">
+    <div class="chips" data-target="g-purpose" data-mode="start">
+      <button type="button">A decision on </button>
+      <button type="button">Approval to </button>
+      <button type="button">Their input on </button>
+      <button type="button">Keep them informed about </button>
+    </div>
+  </section>
+
+  <section class="step" data-step="3" hidden>
+    <h2 tabindex="-1">What happened?</h2>
+    <p class="why">Tell it the way you'd tell a colleague. Each answer becomes one slide, and the
+      details underneath become its bullet points. Only the first is required.</p>
+    <div id="g-beats"></div>
+    <button type="button" class="secondary" id="g-add-beat">+ Add another point</button>
+    <p class="field-error" id="g-beats-error" hidden>Add at least one point — what happened, in a sentence.</p>
+  </section>
+
+  <section class="step" data-step="4" hidden>
+    <h2 tabindex="-1">How should it look?</h2>
+    <p class="why">Style changes type size, spacing and density, not just colour. You can switch later.</p>
+    <div class="styles" role="radiogroup" aria-label="Slide style">
+      <label class="stylecard"><input type="radio" name="g-style" value="operational" checked>
+        <div class="mini" style="--c:#4b2e83"><i class="h"></i><i></i><i></i><i style="width:80%"></i></div>
+        <b>Operational</b><span>Dense and evidence-forward. For working reviews.</span></label>
+      <label class="stylecard"><input type="radio" name="g-style" value="executive">
+        <div class="mini" style="--c:#1d3f5e;gap:9px"><i class="h" style="height:11px"></i><i style="width:60%"></i></div>
+        <b>Executive</b><span>Spare, one idea per slide. For senior audiences.</span></label>
+      <label class="stylecard"><input type="radio" name="g-style" value="workshop">
+        <div class="mini" style="--c:#00707a;gap:7px"><i class="h"></i><i style="width:85%"></i><i style="width:65%"></i></div>
+        <b>Workshop</b><span>Conversational. For discussion and input.</span></label>
+    </div>
+    <label class="field" for="g-title" style="margin-top:24px">Deck title <span class="hint">Optional — leave blank and you can name it later.</span></label>
+    <input type="text" id="g-title" placeholder="e.g. Triage pilot — results and next steps">
+  </section>
+
+  <section class="step" data-step="5" hidden>
+    <h2 tabindex="-1">Check it, then build</h2>
+    <p class="why">This is everything the slides will be made from. Nothing is added that you didn't write.</p>
+    <dl class="review" id="g-review"></dl>
+    <p class="outline-note" id="g-outline"></p>
+  </section>
+
+  <div class="stepnav">
+    <button type="button" class="secondary" id="g-back">Back</button>
+    <span class="spacer"></span>
+    <button type="button" class="big" id="g-next">Next</button>
+  </div>
+  <div class="guide-foot">
+    <button type="button" class="linkbtn" id="g-example">Fill with example answers</button>
+    <button type="button" class="linkbtn" id="g-skip">Skip to the brief form</button>
+  </div>
+</main>
+
+<!-- ================= workspace ================= -->
+<div id="screen-work" class="wrap" hidden>
+
+  <section class="panel brief" aria-labelledby="brief-h">
+    <div class="panelhead">
+      <h2 id="brief-h">The brief</h2>
+      <span class="spacer"></span>
+      <button type="button" class="ghost" id="btn-example">Load example</button>
     </div>
 
-    <label for="f-title">Deck title</label>
-    <input type="text" id="f-title" value="Operational Readiness Review — Q3">
+    <label class="field" for="f-title">Deck title</label>
+    <input type="text" id="f-title" placeholder="e.g. Operational Readiness Review — Q3">
 
-    <label for="f-purpose">Purpose
+    <label class="field" for="f-purpose">Purpose
       <span class="hint">What should happen after this deck?</span></label>
-    <input type="text" id="f-purpose" value="Get approval to extend the pilot to two more divisions">
+    <input type="text" id="f-purpose" placeholder="e.g. Get approval to extend the pilot">
 
-    <label for="f-audience">Audience</label>
-    <input type="text" id="f-audience" value="Divisional directors, mixed technical and operational">
+    <label class="field" for="f-audience">Audience</label>
+    <input type="text" id="f-audience" placeholder="e.g. Divisional directors">
 
-    <label for="f-messages">Key messages
-      <span class="hint">One per line. Start a line with a dash to make it a supporting point
-      under the message above.</span></label>
-    <textarea id="f-messages">The pilot cut average case triage time from 40 minutes to 12
-- Measured across 1,430 cases over 11 weeks
-- Largest gains on multi-source cases
-Officers adopted it without formal training
-- 87% weekly active use by week 4
-Two constraints must be resolved before we scale
-- Data retention rules differ across divisions
-- Model latency degrades past 50 concurrent users
-Extending to Divisions C and D needs a decision this month</textarea>
+    <label class="field" for="f-messages">Key messages
+      <span class="hint">One per line — each becomes a slide. Start a line with a dash to add a
+      supporting point under the message above it.</span></label>
+    <textarea id="f-messages" rows="9" placeholder="The pilot cut triage time from 40 minutes to 12&#10;- Measured across 1,430 cases&#10;Two constraints must be resolved before we scale&#10;- Data retention rules differ"></textarea>
+    <div class="counter" id="msg-counter">No messages yet</div>
 
-    <label for="f-style">Preferred style</label>
+    <label class="field" for="f-style">Style</label>
     <select id="f-style">
-      <option value="operational">Operational brief — dense, evidence-forward</option>
+      <option value="operational">Operational — dense, evidence-forward</option>
       <option value="executive">Executive — spare, one idea per slide</option>
       <option value="workshop">Workshop — conversational</option>
     </select>
 
-    <div class="actions">
-      <button id="btn-generate">Generate deck</button>
-      <button id="btn-download" class="secondary" disabled>Download HTML</button>
-      <button id="btn-share" class="secondary" disabled>Send for editing</button>
-      <label class="filebtn" for="f-open">Open a deck</label>
-      <input type="file" id="f-open" accept=".html,.json" hidden>
-    </div>
+    <div class="warnings" id="warnings"></div>
+    <div class="sync" id="sync-note">Your slide edits are written back into this brief, so regenerating keeps them.</div>
 
-    <p class="editnote">Send for editing saves a copy that carries its own editor and
-      its slide plan. Whoever you send it to edits it with nothing installed, saves, and
-      sends it back; Open a deck brings their version in here with the structure intact.</p>
+    <details class="more">
+      <summary>How sending for editing works</summary>
+      <p>Send for editing saves one HTML file that carries its own editor and its slide plan.
+        Whoever you send it to edits it with nothing installed, saves, and sends it back. Open a deck
+        brings their version in here with the structure intact. It's a file rather than a link on purpose:
+        a link needs a host, and that is the moment content leaves the building.</p>
+    </details>
+
+    <div class="actions">
+      <button id="btn-generate" class="primary-action big">Generate deck</button>
+      <label class="filebtn" for="f-open" tabindex="0" role="button">Open a deck</label>
+    </div>
 
   </section>
 
-  <section class="panel output">
-    <div class="tabs" role="tablist">
-      <button id="tab-deck" role="tab" aria-selected="true" aria-controls="panel-deck">Deck</button>
-      <button id="tab-plan" role="tab" aria-selected="false" aria-controls="panel-plan">Slide plan</button>
-      <button id="tab-chat" role="tab" aria-selected="false" aria-controls="panel-chat">Refine by chat</button>
+  <section class="panel output" aria-label="Output">
+    <div class="outhead">
+      <div class="tabs" role="tablist">
+        <button id="tab-deck" role="tab" aria-selected="true" aria-controls="panel-deck">Deck</button>
+        <button id="tab-plan" role="tab" aria-selected="false" aria-controls="panel-plan">Slide plan</button>
+        <button id="tab-chat" role="tab" aria-selected="false" aria-controls="panel-chat">Refine by chat</button>
+      </div>
+      <span class="spacer"></span>
+      <div class="exports">
+        <button id="btn-download" class="secondary" disabled>Download HTML</button>
+        <button id="btn-share" disabled>Send for editing</button>
+      </div>
+    </div>
+
+    <div class="statusrow">
+      <div class="check" id="content-check" role="status"></div>
+      <p class="version" id="version-note"></p>
     </div>
 
     <div class="tabpanel" id="panel-deck" role="tabpanel" aria-labelledby="tab-deck">
-      <div id="deck-empty" class="empty">No deck yet. Fill in the brief and choose Generate deck.</div>
+      <div id="deck-empty" class="empty">
+        <div class="frame" aria-hidden="true">16 : 9</div>
+        <h3>Your slides will appear here</h3>
+        <p>Fill in the brief and choose <b>Generate deck</b>. Not sure what to write?
+          <button type="button" class="linkbtn" id="btn-empty-guide">Answer five questions instead</button>
+          or <button type="button" class="linkbtn" id="btn-empty-example">load the example</button>.</p>
+      </div>
       <div id="deck-live" hidden>
         <div id="stage-outer"><div id="stage"></div></div>
         <div class="navbar">
-          <button class="secondary" id="btn-prev">Previous</button>
-          <button class="secondary" id="btn-next">Next</button>
+          <button class="secondary iconbtn" id="btn-prev" aria-label="Previous slide">&larr;</button>
+          <button class="secondary iconbtn" id="btn-next" aria-label="Next slide">&rarr;</button>
           <span class="count" id="count"></span>
-          <span class="count" id="timing"></span>
+          <span class="timing" id="timing"></span>
           <span class="spacer"></span>
           <button class="secondary" id="btn-undo" disabled>Undo</button>
           <button class="danger" id="btn-delete">Delete slide</button>
         </div>
-        <p class="editnote">Click a headline or a bullet in the slide to edit it. The change is
-          written to the slide plan and back into the brief, so nothing lives only in the rendered
-          HTML. Delete removes the current slide; Undo steps back through any change.</p>
+        <div class="strip" id="strip" aria-label="All slides"></div>
+        <p class="editnote">Click any headline or bullet on the slide to edit it — the change goes
+          back into the brief too. Use &larr; &rarr; to move between slides.</p>
       </div>
     </div>
 
     <div class="tabpanel" id="panel-plan" role="tabpanel" aria-labelledby="tab-plan" hidden>
-      <p class="plancap">This structured plan sits between the requirement and the rendered slides.
-        It is the single source of truth the renderer reads from, and it is what an agent or an
-        external tool would read and write, not the HTML.</p>
+      <p class="plancap">The structured plan between your brief and the slides. It's the single source
+        of truth: the renderer, the inline editor, the chat and the optional MCP server all read and
+        write this — never the HTML.</p>
       <pre class="plan" id="planout">No plan yet.</pre>
     </div>
 
     <div class="tabpanel" id="panel-chat" role="tabpanel" aria-labelledby="tab-chat" hidden>
-      <p class="plancap">The conversational surface writes to the same slide plan the interface
-        edits. Chat and interface are two views of one object, so a change made here survives
-        being edited on the slide afterwards, and the brief stays in step with both.
-        Deterministic command parsing — no model in the loop, which is what keeps this offline.</p>
+      <p class="plancap">Short commands that change the same slide plan. Fixed commands, no model —
+        which is what keeps it offline.</p>
       <div class="chatlog" id="chatlog"></div>
       <div class="chatbar">
-        <input type="text" id="chat-input" placeholder="e.g. cut to 5 slides">
+        <input type="text" id="chat-input" placeholder="e.g. cut to 5 slides" aria-label="Command">
         <button id="chat-send">Send</button>
       </div>
-      <p class="editnote" id="chat-help">Try: <code>cut to 5 slides</code> ·
-        <code>delete slide 4</code> · <code>make slide 3 say Latency is the binding constraint</code> ·
-        <code>add to slide 2: measured over 11 weeks</code> · <code>style executive</code> ·
-        <code>make the ask explicit</code> · <code>undo</code></p>
+      <div class="examples" id="chat-help" aria-label="Example commands">
+        <button type="button">cut to 5 slides</button>
+        <button type="button">delete slide 4</button>
+        <button type="button">make slide 3 say …</button>
+        <button type="button">add to slide 2: …</button>
+        <button type="button">style executive</button>
+        <button type="button">make the ask explicit</button>
+        <button type="button">undo</button>
+      </div>
     </div>
   </section>
 
 </div>
+
+<div id="notice" role="status" aria-live="polite" hidden><span id="notice-text"></span><button type="button" id="notice-action" hidden></button></div>
 
 <script>
 (function(){
@@ -378,11 +700,42 @@ function showSlide(n){
   slides[current].classList.add("on");
   document.getElementById("count").textContent =
     "Slide " + (current + 1) + " of " + slides.length;
+  var thumbs = document.querySelectorAll("#strip button");
+  for (var k = 0; k < thumbs.length; k++){
+    thumbs[k].setAttribute("aria-current", k === current ? "true" : "false");
+  }
+  if (thumbs[current] && thumbs[current].scrollIntoView){
+    var strip = document.getElementById("strip");
+    var b = thumbs[current];
+    if (b.offsetLeft < strip.scrollLeft || b.offsetLeft + b.offsetWidth > strip.scrollLeft + strip.clientWidth){
+      strip.scrollLeft = b.offsetLeft - 8;
+    }
+  }
+}
+
+function renderStrip(){
+  var strip = document.getElementById("strip");
+  var st = STYLES[plan.meta.style] || STYLES.operational;
+  strip.style.setProperty("--saccent", st.accent);
+  strip.innerHTML = "";
+  for (var i = 0; i < plan.slides.length; i++){
+    var s = plan.slides[i];
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = s.type;
+    b.setAttribute("aria-label", "Slide " + (i + 1) + ": " + s.title);
+    var n = document.createElement("span"); n.className = "sn"; n.textContent = String(i + 1);
+    var t = document.createElement("span"); t.className = "st"; t.textContent = s.title;
+    b.appendChild(n); b.appendChild(t);
+    (function(idx){ b.addEventListener("click", function(){ showSlide(idx); }); })(i);
+    strip.appendChild(b);
+  }
 }
 
 function renderDeck(startAt){
   applyStageStyle(plan.meta.style);
   document.getElementById("stage").innerHTML = slideMarkup(plan, true);
+  renderStrip();
   fitStage();
   showSlide(Math.max(0, Math.min(startAt || 0, plan.slides.length - 1)));
 }
@@ -657,6 +1010,12 @@ function clearEdited(){
 }
 
 function generate(){
+  if (!document.getElementById("f-messages").value.trim()){
+    notify("Add at least one key message first — each line becomes a slide.");
+    document.getElementById("f-messages").focus();
+    return;
+  }
+  document.getElementById("notice").hidden = true;
   snapshot();
   version += 1;
   var t0 = (window.performance && performance.now) ? performance.now() : Date.now();
@@ -672,8 +1031,9 @@ function generate(){
   refreshWarnings();
   refreshContentCheck();
   document.getElementById("timing").textContent =
-    "v" + version + " \u00B7 " + plan.slides.length + " slides in " +
-    Math.max(1, Math.round(t1 - t0)) + " ms";
+    "v" + version + " \u00B7 built in " + Math.max(1, Math.round(t1 - t0)) + " ms";
+  document.getElementById("btn-generate").textContent = "Update deck";
+  selectTab("deck");
 }
 
 function deleteSlide(){
@@ -740,11 +1100,13 @@ document.addEventListener("focusout", function(e){
   refreshPlanView();
   refreshContentCheck();
   markEdited();
+  if (field === "title"){ renderStrip(); showSlide(current); }
 }, true);
 
 document.addEventListener("keydown", function(e){
   var t = e.target;
   if (t && (t.isContentEditable || t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return;
+  if (screen !== "work") return;
   if (e.key === "ArrowRight"){ e.preventDefault(); showSlide(current + 1); }
   if (e.key === "ArrowLeft"){ e.preventDefault(); showSlide(current - 1); }
 });
@@ -947,7 +1309,10 @@ function loadPlanObject(incoming, label){
   refreshContentCheck();
   clearEdited();
   document.getElementById("timing").textContent =
-    "v" + version + " · " + plan.slides.length + " slides, opened from a file";
+    "v" + version + " · opened from a file";
+  document.getElementById("btn-generate").textContent = "Update deck";
+  showScreen("work");
+  selectTab("deck");
   document.getElementById("version-note").textContent =
     "Opened " + label + ". The brief has been filled in from their version, so you can " +
     "keep working on it here.";
@@ -984,14 +1349,26 @@ function openDeckFile(file){
 
 /* ---------- inline notices (no blocking dialogs) ---------- */
 var noticeTimer = null;
-function notify(message){
+var noticeAction = null;
+function notify(message, actionLabel, action){
   var box = document.getElementById("notice");
   if (!box) return;
-  box.textContent = message;
+  document.getElementById("notice-text").textContent = message;
+  var btn = document.getElementById("notice-action");
+  noticeAction = action || null;
+  btn.hidden = !action;
+  btn.textContent = actionLabel || "";
   box.hidden = false;
   if (noticeTimer) window.clearTimeout(noticeTimer);
-  noticeTimer = window.setTimeout(function(){ box.hidden = true; }, 6000);
+  noticeTimer = window.setTimeout(function(){ box.hidden = true; noticeAction = null; },
+    action ? 9000 : 6000);
 }
+document.getElementById("notice-action").addEventListener("click", function(){
+  var fn = noticeAction;
+  document.getElementById("notice").hidden = true;
+  noticeAction = null;
+  if (fn) fn();
+});
 
 /* ---------- offline status ----------
    The app never calls the network, so losing connectivity changes nothing about what
@@ -1021,7 +1398,396 @@ if ("serviceWorker" in navigator &&
   });
 }
 
-generate();
+/* ---------- example data ----------
+   Loaded only when someone asks for it. The app opens empty so nobody has to clear out
+   someone else's briefing before starting their own. */
+var SAMPLE = {
+  title: "Operational Readiness Review — Q3",
+  purpose: "Get approval to extend the pilot to two more divisions",
+  audience: "Divisional directors, mixed technical and operational",
+  style: "operational",
+  messages: [
+    "The pilot cut average case triage time from 40 minutes to 12",
+    "- Measured across 1,430 cases over 11 weeks",
+    "- Largest gains on multi-source cases",
+    "Officers adopted it without formal training",
+    "- 87% weekly active use by week 4",
+    "Two constraints must be resolved before we scale",
+    "- Data retention rules differ across divisions",
+    "- Model latency degrades past 50 concurrent users",
+    "Extending to Divisions C and D needs a decision this month"
+  ].join("\n")
+};
+
+var FORM_FIELDS = ["f-title", "f-purpose", "f-audience", "f-messages", "f-style"];
+
+function readForm(){
+  var o = {};
+  FORM_FIELDS.forEach(function(id){ o[id] = document.getElementById(id).value; });
+  return o;
+}
+function writeForm(o){
+  FORM_FIELDS.forEach(function(id){ if (id in o) document.getElementById(id).value = o[id]; });
+  updateCounter();
+}
+function briefHasContent(){
+  return ["f-title", "f-purpose", "f-audience", "f-messages"].some(function(id){
+    return document.getElementById(id).value.trim() !== "";
+  });
+}
+
+function loadExampleIntoBrief(){
+  var before = briefHasContent() ? readForm() : null;
+  writeForm({ "f-title": SAMPLE.title, "f-purpose": SAMPLE.purpose, "f-audience": SAMPLE.audience,
+              "f-messages": SAMPLE.messages, "f-style": SAMPLE.style });
+  if (before){
+    notify("Example loaded over your brief.", "Undo", function(){
+      writeForm(before);
+      notify("Your brief is back.");
+    });
+  } else {
+    notify("Example loaded. Choose Generate deck to see it as slides.");
+  }
+}
+
+/* ---------- parsing key messages, shared by the counter and the guided path ---------- */
+function parseMessages(raw){
+  var lines = String(raw || "").split("\n"), out = [];
+  for (var i = 0; i < lines.length; i++){
+    var line = lines[i];
+    if (!line.trim()) continue;
+    var isSupport = /^\s+/.test(line) || /^\s*[-*•]/.test(line);
+    var text = line.replace(/^\s*[-*•]\s*/, "").trim();
+    if (!text) continue;
+    if (isSupport && out.length) out[out.length - 1].support.push(text);
+    else out.push({ headline: text, support: [] });
+  }
+  return out;
+}
+
+function updateCounter(){
+  var msgs = parseMessages(document.getElementById("f-messages").value);
+  var box = document.getElementById("msg-counter");
+  if (!msgs.length){ box.textContent = "No messages yet"; return; }
+  var sup = msgs.reduce(function(n, m){ return n + m.support.length; }, 0);
+  var slides = msgs.length + 2 + (document.getElementById("f-purpose").value.trim() ? 1 : 0);
+  box.textContent = msgs.length + (msgs.length === 1 ? " message" : " messages") + " · " +
+    sup + " supporting point" + (sup === 1 ? "" : "s") + " → " + slides + " slides";
+}
+document.getElementById("f-messages").addEventListener("input", updateCounter);
+document.getElementById("f-purpose").addEventListener("input", updateCounter);
+
+/* ---------- screens ---------- */
+var screen = "welcome";
+function showScreen(name){
+  /* The guided answers and the brief are one draft: leaving the guided path writes it back. */
+  if (screen === "guide" && name !== "guide") briefFromGuided();
+  screen = name;
+  ["welcome", "guide", "work"].forEach(function(k){
+    document.getElementById("screen-" + k).hidden = (k !== name);
+    var c = document.getElementById("crumb-" + k);
+    if (k === name) c.setAttribute("aria-current", "page"); else c.removeAttribute("aria-current");
+  });
+  window.scrollTo(0, 0);
+  if (name === "work"){ updateCounter(); fitStage(); }
+}
+
+/* ---------- guided path ----------
+   Asks what happened rather than what the deck should say. Every answer is written into
+   the same brief fields the form uses, word for word, so the content check still traces
+   each slide line back to something the person typed. */
+var BEATS = [
+  { q: "What happened, or what changed?",
+    ph: "e.g. The pilot cut average case triage time from 40 minutes to 12",
+    dph: "e.g. Measured across 1,430 cases over 11 weeks" },
+  { q: "What does it show, or why does it matter?",
+    ph: "e.g. Officers adopted it without formal training",
+    dph: "e.g. 87% weekly active use by week 4" },
+  { q: "What is in the way?",
+    ph: "e.g. Two constraints must be resolved before we scale",
+    dph: "e.g. Data retention rules differ across divisions" },
+  { q: "What happens next?",
+    ph: "e.g. Extending to two more divisions needs a decision this month",
+    dph: "e.g. Rollout could start in the new quarter" }
+];
+var beats = [];
+var step = 1, STEPS = 5;
+
+function blankBeats(){
+  beats = [];
+  for (var i = 0; i < BEATS.length; i++) beats.push({ headline: "", detail: "" });
+}
+
+function renderBeats(){
+  var box = document.getElementById("g-beats");
+  box.innerHTML = "";
+  beats.forEach(function(b, i){
+    var spec = BEATS[i] || { q: "Anything else they must know?", ph: "One sentence", dph: "Details, one per line" };
+    var card = document.createElement("div");
+    card.className = "beat";
+    var q = document.createElement("p"); q.className = "q";
+    var num = document.createElement("span"); num.className = "num"; num.textContent = String(i + 1);
+    var lab = document.createElement("label"); lab.htmlFor = "g-beat-" + i; lab.textContent = spec.q;
+    q.appendChild(num); q.appendChild(lab);
+    if (i > 0){ var opt = document.createElement("span"); opt.className = "opt"; opt.textContent = "optional"; q.appendChild(opt); }
+    var inp = document.createElement("input");
+    inp.type = "text"; inp.id = "g-beat-" + i; inp.placeholder = spec.ph; inp.value = b.headline;
+    inp.addEventListener("input", function(){ beats[i].headline = inp.value;
+      document.getElementById("g-beats-error").hidden = true; });
+    var dl = document.createElement("label"); dl.className = "detail-label"; dl.htmlFor = "g-detail-" + i;
+    dl.textContent = "Details or numbers that back it up — one per line";
+    var ta = document.createElement("textarea");
+    ta.id = "g-detail-" + i; ta.rows = 2; ta.placeholder = spec.dph; ta.value = b.detail;
+    ta.addEventListener("input", function(){ beats[i].detail = ta.value; });
+    card.appendChild(q); card.appendChild(inp); card.appendChild(dl); card.appendChild(ta);
+    if (i >= BEATS.length){
+      var rm = document.createElement("button");
+      rm.type = "button"; rm.className = "ghost remove"; rm.textContent = "Remove";
+      rm.setAttribute("aria-label", "Remove point " + (i + 1));
+      rm.addEventListener("click", function(){ beats.splice(i, 1); renderBeats(); });
+      card.appendChild(rm);
+    }
+    box.appendChild(card);
+  });
+}
+
+function guidedFromBrief(){
+  document.getElementById("g-audience").value = document.getElementById("f-audience").value;
+  document.getElementById("g-purpose").value = document.getElementById("f-purpose").value;
+  document.getElementById("g-title").value = document.getElementById("f-title").value;
+  var style = document.getElementById("f-style").value;
+  var radios = document.querySelectorAll("input[name=g-style]");
+  for (var r = 0; r < radios.length; r++) radios[r].checked = (radios[r].value === style);
+  var msgs = parseMessages(document.getElementById("f-messages").value);
+  blankBeats();
+  msgs.forEach(function(m, i){
+    var b = { headline: m.headline, detail: m.support.join("\n") };
+    if (i < beats.length) beats[i] = b; else beats.push(b);
+  });
+  renderBeats();
+}
+
+function guidedStyle(){
+  var c = document.querySelector("input[name=g-style]:checked");
+  return c ? c.value : "operational";
+}
+
+function guidedMessages(){
+  var lines = [];
+  beats.forEach(function(b){
+    var h = b.headline.trim();
+    if (!h) return;
+    lines.push(h);
+    b.detail.split("\n").forEach(function(d){
+      d = d.replace(/^\s*[-*•]\s*/, "").trim();
+      if (d) lines.push("- " + d);
+    });
+  });
+  return lines.join("\n");
+}
+
+function briefFromGuided(){
+  writeForm({
+    "f-title": document.getElementById("g-title").value.trim(),
+    "f-purpose": document.getElementById("g-purpose").value.trim(),
+    "f-audience": document.getElementById("g-audience").value.trim(),
+    "f-messages": guidedMessages(),
+    "f-style": guidedStyle()
+  });
+}
+
+function addReviewRow(dl, label, value, gotoStep){
+  var row = document.createElement("div"); row.className = "row";
+  var dt = document.createElement("dt"); dt.textContent = label;
+  var dd = document.createElement("dd");
+  if (value instanceof Node) dd.appendChild(value);
+  else if (value){ dd.textContent = value; }
+  else { dd.textContent = "Not given — that's fine"; dd.className = "empty"; }
+  var ed = document.createElement("button");
+  ed.type = "button"; ed.className = "ghost"; ed.textContent = "Edit";
+  ed.setAttribute("aria-label", "Edit " + label.toLowerCase());
+  ed.addEventListener("click", function(){ goStep(gotoStep); });
+  row.appendChild(dt); row.appendChild(dd); row.appendChild(ed);
+  dl.appendChild(row);
+}
+
+function renderReview(){
+  var dl = document.getElementById("g-review");
+  dl.innerHTML = "";
+  var aud = document.getElementById("g-audience").value.trim();
+  var pur = document.getElementById("g-purpose").value.trim();
+  var tit = document.getElementById("g-title").value.trim();
+  addReviewRow(dl, "Audience", aud, 1);
+  addReviewRow(dl, "The ask", pur, 2);
+  var ol = document.createElement("ol"), count = 0;
+  beats.forEach(function(b){
+    if (!b.headline.trim()) return;
+    count++;
+    var li = document.createElement("li"); li.textContent = b.headline.trim();
+    var ds = b.detail.split("\n").map(function(d){ return d.replace(/^\s*[-*•]\s*/, "").trim(); })
+      .filter(Boolean);
+    if (ds.length){
+      var ul = document.createElement("ul");
+      ds.forEach(function(d){ var x = document.createElement("li"); x.textContent = d; ul.appendChild(x); });
+      li.appendChild(ul);
+    }
+    ol.appendChild(li);
+  });
+  addReviewRow(dl, "What happened", ol, 3);
+  var names = { operational: "Operational", executive: "Executive", workshop: "Workshop" };
+  addReviewRow(dl, "Style", names[guidedStyle()], 4);
+  addReviewRow(dl, "Title", tit, 4);
+  var total = count + 2 + (pur ? 1 : 0);
+  document.getElementById("g-outline").textContent =
+    "You'll get " + total + " slides: a title slide" + (pur ? ", why we are here" : "") +
+    ", " + count + " slide" + (count === 1 ? "" : "s") + " for what happened, and the ask.";
+}
+
+function validStep(n){
+  if (n === 3){
+    var ok = beats.some(function(b){ return b.headline.trim(); });
+    document.getElementById("g-beats-error").hidden = ok;
+    if (!ok) document.getElementById("g-beat-0").focus();
+    return ok;
+  }
+  return true;
+}
+
+function goStep(n){
+  step = Math.max(1, Math.min(STEPS, n));
+  var secs = document.querySelectorAll("#screen-guide .step");
+  for (var i = 0; i < secs.length; i++) secs[i].hidden = (+secs[i].getAttribute("data-step") !== step);
+  document.getElementById("g-fill").style.width = (step / STEPS * 100) + "%";
+  document.getElementById("g-label").textContent = "Step " + step + " of " + STEPS;
+  document.getElementById("g-back").textContent = step === 1 ? "Back to start" : "Back";
+  document.getElementById("g-next").textContent = step === STEPS ? "Build my deck" : "Next";
+  if (step === STEPS) renderReview();
+  var sec = document.querySelector('#screen-guide .step[data-step="' + step + '"]');
+  var first = sec.querySelector("input[type=text], textarea");
+  if (first && step !== STEPS) first.focus(); else sec.querySelector("h2").focus();
+  window.scrollTo(0, 0);
+}
+
+function startGuide(){
+  guidedFromBrief();
+  showScreen("guide");
+  goStep(1);
+}
+
+function finishGuide(){
+  briefFromGuided();
+  showScreen("work");
+  generate();
+}
+
+document.getElementById("g-next").addEventListener("click", function(){
+  if (!validStep(step)) return;
+  if (step === STEPS) finishGuide(); else goStep(step + 1);
+});
+document.getElementById("g-back").addEventListener("click", function(){
+  if (step === 1) showScreen("welcome"); else goStep(step - 1);
+});
+document.getElementById("g-add-beat").addEventListener("click", function(){
+  beats.push({ headline: "", detail: "" });
+  renderBeats();
+  document.getElementById("g-beat-" + (beats.length - 1)).focus();
+});
+document.getElementById("g-skip").addEventListener("click", function(){
+  briefFromGuided();
+  showScreen("work");
+});
+document.getElementById("g-example").addEventListener("click", function(){
+  var saved = readForm();
+  writeForm({ "f-title": SAMPLE.title, "f-purpose": SAMPLE.purpose, "f-audience": SAMPLE.audience,
+              "f-messages": SAMPLE.messages, "f-style": SAMPLE.style });
+  guidedFromBrief();
+  writeForm(saved);
+  goStep(step);
+  notify("Example answers filled in. Change anything, or step through to see the deck.");
+});
+
+/* Enter on a one-line answer moves forward, the way a form wizard should. */
+document.getElementById("screen-guide").addEventListener("keydown", function(e){
+  var t = e.target;
+  if (e.key === "Enter" && t && t.tagName === "INPUT" && t.type === "text"){
+    e.preventDefault();
+    if (t.id.indexOf("g-beat-") === 0){
+      var d = document.getElementById(t.id.replace("g-beat-", "g-detail-"));
+      if (d) d.focus();
+      return;
+    }
+    document.getElementById("g-next").click();
+  }
+});
+
+/* Chips: a quick starting answer. "replace" fills the field; "start" begins the
+   sentence and leaves the cursor at the end so the person finishes it themselves. */
+var chipRows = document.querySelectorAll(".chips");
+for (var cr = 0; cr < chipRows.length; cr++){
+  (function(row){
+    row.addEventListener("click", function(e){
+      var b = e.target.closest("button");
+      if (!b) return;
+      var inp = document.getElementById(row.getAttribute("data-target"));
+      inp.value = b.textContent;
+      inp.focus();
+      var end = inp.value.length;
+      try { inp.setSelectionRange(end, end); } catch (err){}
+    });
+  })(chipRows[cr]);
+}
+
+/* ---------- start screen and navigation ---------- */
+document.getElementById("path-guide").addEventListener("click", startGuide);
+document.getElementById("path-brief").addEventListener("click", function(){
+  showScreen("work");
+  document.getElementById("f-title").focus();
+});
+document.getElementById("btn-try-example").addEventListener("click", function(){
+  writeForm({ "f-title": SAMPLE.title, "f-purpose": SAMPLE.purpose, "f-audience": SAMPLE.audience,
+              "f-messages": SAMPLE.messages, "f-style": SAMPLE.style });
+  showScreen("work");
+  generate();
+  notify("This is the example. Click any line on the slide to edit it, or replace the brief with your own.");
+});
+document.getElementById("nav-home").addEventListener("click", function(){ showScreen("welcome"); });
+document.getElementById("crumb-welcome").addEventListener("click", function(){ showScreen("welcome"); });
+document.getElementById("crumb-guide").addEventListener("click", function(){
+  if (screen !== "guide") startGuide();
+});
+document.getElementById("crumb-work").addEventListener("click", function(){
+  if (screen === "guide") briefFromGuided();
+  showScreen("work");
+});
+document.getElementById("btn-example").addEventListener("click", loadExampleIntoBrief);
+document.getElementById("btn-empty-example").addEventListener("click", loadExampleIntoBrief);
+document.getElementById("btn-empty-guide").addEventListener("click", startGuide);
+
+/* Example commands: complete ones run straight away; ones with a gap fill the box. */
+document.getElementById("chat-help").addEventListener("click", function(e){
+  var b = e.target.closest("button");
+  if (!b) return;
+  var cmd = b.textContent;
+  var inp = document.getElementById("chat-input");
+  if (cmd.indexOf("…") !== -1){
+    inp.value = cmd.replace(/\s*…\s*$/, " ");
+    inp.focus();
+  } else {
+    handleChat(cmd);
+  }
+});
+
+/* The file labels open the hidden picker; make them work from the keyboard too. */
+var fileBtns = document.querySelectorAll(".filebtn");
+for (var fb = 0; fb < fileBtns.length; fb++){
+  fileBtns[fb].addEventListener("keydown", function(e){
+    if (e.key === "Enter" || e.key === " "){ e.preventDefault(); document.getElementById("f-open").click(); }
+  });
+}
+
+blankBeats();
+renderBeats();
+updateCounter();
 })();
 </script>
 </body>

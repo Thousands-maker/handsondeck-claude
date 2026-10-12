@@ -27,6 +27,27 @@ for the full jobs-to-be-done analysis and the user stories with acceptance crite
 
 ---
 
+## Two ways in
+
+The app opens on a start screen, not on a filled-in form, and offers two paths that match
+the two user groups:
+
+- **Walk me through it** — five short questions for someone who knows what happened but
+  not how to present it: who will be in the room, what you need from them, what happened
+  (as up to four story beats — what changed, why it matters, what is in the way, what
+  happens next — each with optional supporting detail), how it should look, then a review
+  of everything before the deck is built. Every answer is written word for word into the
+  same brief fields the form uses, so the content check still traces each line back to
+  something the person typed.
+- **I'll write the brief** — straight to the form and the deck, for someone who already
+  knows their key messages.
+
+The example briefing is never loaded on its own. It sits behind a button — *see a finished
+example first* on the start screen, *Load example* on the brief, *Fill with example
+answers* in the guided path — and loading it over a brief you have started can be undone.
+
+---
+
 ## How it works
 
 Three stages, with a structured plan in the middle rather than a jump straight from text
@@ -190,9 +211,11 @@ knows what it is.
 ### What version two would test, not build
 
 Put it in front of six frontline officers with a real report due and watch where they
-stop. The open question is not which features are missing — it is whether the brief form
-is the right first screen for someone who cannot describe what they need. The answer
-might be that the first screen should ask what happened, not what the deck should say.
+stop. The guided path is a first answer to whether the brief form was the right first
+screen for someone who cannot describe what they need: it asks what happened, not what
+the deck should say. Whether four story beats is the right scaffold — or whether people
+need to start from something even looser, like pasting in an email thread — is what the
+test should find out.
 
 ---
 
