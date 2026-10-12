@@ -266,7 +266,7 @@ because the assistant integration is something you turn on, not something baked 
 JSON-RPC-over-stdio MCP server, so an assistant works through the same plan object the
 interface edits.
 
-**Tools:** `create_deck_plan`, `render_deck`, `revise_plan`, `review_deck`
+**Tools:** `create_deck_plan`, `revise_deck_plan`, `review_deck`, `render_preview`, `read_deck_plan`
 **Resources:** `handsondeck://house-style`, `handsondeck://structure-rules`
 **Prompts:** `decision_brief`, `incident_report`, `exec_summary`
 

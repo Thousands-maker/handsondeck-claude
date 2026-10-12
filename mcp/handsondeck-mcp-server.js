@@ -194,6 +194,31 @@ function revisePlan(plan, instruction){
 }
 
 /* Critique only — never mutates. */
+/* Read-only inspection. An agent about to revise a plan should be able to look at it
+   first without re-deriving it from the rendered HTML, and without any call that could
+   change it. Returns the plan's shape, not its rendering. */
+function readDeckPlan(plan){
+  if (!plan || !Array.isArray(plan.slides)) throw new Error("plan is missing or has no slides");
+  const meta = plan.meta || {};
+  return {
+    meta: {
+      title: meta.title || null,
+      purpose: meta.purpose || null,
+      audience: meta.audience || null,
+      style: meta.style || null,
+      version: meta.version || 0,
+      contentCheck: meta.contentCheck || null
+    },
+    slideCount: plan.slides.length,
+    outline: plan.slides.map((s, i) => ({
+      n: i + 1,
+      type: s.type,
+      title: s.title,
+      support: s.support || (s.subtitle ? [s.subtitle] : [])
+    }))
+  };
+}
+
 function reviewDeck(plan){
   const findings = [];
   const points = plan.slides.filter(s => s.type === "point");
@@ -217,7 +242,7 @@ function reviewDeck(plan){
 
 const TOOLS = [
   { name: "create_deck_plan",
-    description: "Turn a plain-language brief into a structured slide plan. The plan is the source of truth; render_deck reads from it.",
+    description: "Turn a plain-language brief into a structured slide plan. The plan is the source of truth; render_preview reads from it.",
     inputSchema: { type: "object", required: ["key_messages"], properties: {
       title: { type: "string", description: "Deck title." },
       purpose: { type: "string", description: "What should happen after this deck — becomes the context slide and the ask." },
@@ -225,11 +250,11 @@ const TOOLS = [
       key_messages: { type: "string", description: "One message per line; a line starting with a dash is a supporting point under the message above." },
       style: { type: "string", enum: ["operational", "executive", "workshop"] } } } },
 
-  { name: "render_deck",
-    description: "Render a slide plan as a self-contained HTML deck with no external dependencies. Returns the file contents; it does not send or store anything.",
+  { name: "render_preview",
+    description: "Render a slide plan as a self-contained HTML preview with no external dependencies. Returns the file contents for confirmation; it does not approve, store, send or release anything. Release stays in the native product.",
     inputSchema: { type: "object", required: ["plan"], properties: { plan: { type: "object" } } } },
 
-  { name: "revise_plan",
+  { name: "revise_deck_plan",
     description: "Apply one structural edit to a slide plan and return the revised plan. Structure only — it cannot introduce content the officer did not write.",
     inputSchema: { type: "object", required: ["plan", "instruction"], properties: {
       plan: { type: "object" },
@@ -237,6 +262,10 @@ const TOOLS = [
 
   { name: "review_deck",
     description: "Critique a slide plan against structural and content-provenance rules. Read-only: never mutates the plan.",
+    inputSchema: { type: "object", required: ["plan"], properties: { plan: { type: "object" } } } },
+
+  { name: "read_deck_plan",
+    description: "Return the shape of a slide plan — meta, slide count and a numbered outline — so a plan can be inspected before it is revised. Read-only: never mutates the plan and never renders it.",
     inputSchema: { type: "object", required: ["plan"], properties: { plan: { type: "object" } } } }
 ];
 
@@ -296,7 +325,7 @@ classified, stop and tell the officer this route is not accredited for it.`;
   if (name === "exec_summary"){
     return `Condense an existing slide plan to ${a.max_slides || "five"} slides for a more senior audience.
 
-Use revise_plan. Keep the closing slide stating the ask, and keep the strongest
+Use revise_deck_plan. Keep the closing slide stating the ask, and keep the strongest
 supporting evidence for each retained message. Remove detail, never conclusions.
 Do not rewrite the argument into something the officer did not make, and report
 what was dropped so they can put it back.`;
@@ -336,10 +365,11 @@ function handle(method, params){
     case "tools/call": {
       const a = params.arguments || {};
       switch (params.name){
-        case "create_deck_plan": return ok(text(createDeckPlan(a)));
-        case "render_deck":      return ok(text(renderDeck(a.plan)));
-        case "revise_plan":      return ok(text(revisePlan(a.plan, a.instruction)));
-        case "review_deck":      return ok(text(reviewDeck(a.plan)));
+        case "create_deck_plan":  return ok(text(createDeckPlan(a)));
+        case "render_preview":    return ok(text(renderDeck(a.plan)));
+        case "revise_deck_plan":  return ok(text(revisePlan(a.plan, a.instruction)));
+        case "review_deck":       return ok(text(reviewDeck(a.plan)));
+        case "read_deck_plan":    return ok(text(readDeckPlan(a.plan)));
         default: throw new Error(`Unknown tool: ${params.name}`);
       }
     }
@@ -372,4 +402,4 @@ process.stdin.on("data", chunk => {
   }
 });
 
-module.exports = { createDeckPlan, renderDeck, revisePlan, reviewDeck, promptText, TOOLS, RESOURCES, PROMPTS };
+module.exports = { createDeckPlan, renderDeck, revisePlan, reviewDeck, readDeckPlan, promptText, TOOLS, RESOURCES, PROMPTS };

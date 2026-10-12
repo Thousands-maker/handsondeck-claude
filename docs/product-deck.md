@@ -224,8 +224,9 @@ security, audit, approval, monitoring**
 
 **Tools**
 - `create_deck_plan(brief)` — prose in, structured plan out
-- `render_deck(plan)` — plan in, HTML out
-- `revise_plan(plan, instruction)` — targeted structural edit
+- `render_preview(plan)` — plan in, HTML preview out; never approves or releases
+- `revise_deck_plan(plan, instruction)` — targeted structural edit
+- `read_deck_plan(plan)` — read-only inspection of the plan's shape
 - `review_deck(plan)` — critique only, no mutation
 
 **Resources the product needs**

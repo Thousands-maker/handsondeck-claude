@@ -52,8 +52,9 @@ is unaffected either way.
 | Tool | Does |
 | --- | --- |
 | `create_deck_plan` | Brief in, structured slide plan out |
-| `render_deck` | Plan to standalone HTML |
-| `revise_plan` | Apply a change to an existing plan |
+| `revise_deck_plan` | Apply one structural change to an existing plan |
+| `render_preview` | Plan to standalone HTML, for confirmation only |
+| `read_deck_plan` | Read-only inspection of a plan's shape |
 | `review_deck` | Check structure and trace content back to the brief |
 
 **Resources** — `handsondeck://house-style`, `handsondeck://structure-rules`
@@ -71,6 +72,6 @@ would drift out of step with the slides.
 Working on the plan means an assistant's change behaves exactly like one made by hand:
 it updates the plan, the render follows, and the brief stays in step.
 
-The plan carries `meta.sourceText`, the original brief. Without it, `revise_plan`
+The plan carries `meta.sourceText`, the original brief. Without it, `revise_deck_plan`
 re-checked content against the revision instruction rather than against the brief, and
 flagged every legitimate item as untraced. That field is the fix.
