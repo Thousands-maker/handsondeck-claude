@@ -226,6 +226,36 @@
   .check.ai{background:#fbf3e2; color:#6d4a00}
   .check.ai::before{background:#d39b1b}
   .stepnav{display:flex; align-items:center; gap:10px; margin-top:26px; flex-wrap:wrap}
+  .slideprev{margin-top:20px; border-top:1px solid var(--rule); padding-top:18px}
+  .sp-head{display:flex; align-items:baseline; gap:10px; margin-bottom:10px}
+  .sp-head h3{margin:0; font-size:16px}
+  .sp-count{font-size:13px; color:var(--muted)}
+  .sp-stale{background:var(--warn-bg); color:#6d4a00; font-size:13.5px; border-radius:var(--radius-sm);
+    padding:9px 12px; margin-bottom:10px}
+  .sp-empty{text-align:center; color:var(--muted); font-size:14px; padding:14px 8px 4px}
+  .sp-empty p{margin:6px auto; max-width:46ch}
+  .sp-ghost{display:flex; gap:10px; justify-content:center; margin-bottom:10px}
+  .sp-ghost i{width:96px; aspect-ratio:16/9; border:2px dashed var(--rule-strong); border-radius:6px}
+  .sp-list{list-style:none; margin:0; padding:0; display:grid; gap:10px; counter-reset:sl 1}
+  .sp-card{position:relative; background:var(--paper); border:1px solid var(--rule); border-left:5px solid var(--primary);
+    border-radius:8px; padding:12px 14px 12px 16px; box-shadow:var(--shadow)}
+  .sp-card.fresh{animation:arrive .3s ease-out}
+  .sp-meta{display:flex; align-items:center; gap:8px; margin-bottom:6px; padding-right:28px}
+  .sp-no{font-size:11px; font-weight:700; color:var(--muted); letter-spacing:.06em; text-transform:uppercase}
+  .sp-kind{font-size:11.5px; font-weight:700; color:var(--primary); background:var(--primary-soft);
+    padding:2px 8px; border-radius:999px}
+  .sp-card input.sp-title{border:1px solid transparent; padding:4px 6px; margin-left:-7px; width:calc(100% + 7px);
+    font-size:17px; font-weight:650; background:transparent}
+  .sp-card textarea.sp-points{border:1px solid transparent; padding:4px 6px; margin-left:-7px; width:calc(100% + 7px);
+    min-height:0; font-size:14px; color:var(--ink-2); background:transparent; resize:vertical}
+  .sp-card input.sp-title:hover, .sp-card textarea.sp-points:hover{border-color:var(--rule)}
+  .sp-card input.sp-title:focus, .sp-card textarea.sp-points:focus{border-color:var(--primary); background:#fff}
+  .sp-card .sp-x{position:absolute; top:8px; right:8px; padding:2px 8px; font-size:16px; line-height:1;
+    color:var(--muted); background:transparent; border:0}
+  .sp-card .sp-x:hover{color:var(--bad); background:var(--bad-bg)}
+  .sp-ask{margin-top:10px; background:var(--primary-soft); border-radius:8px; padding:10px 14px; font-size:14px}
+  .sp-ask b{display:block; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--primary); margin-bottom:2px}
+  #g-add-beat{margin-top:10px}
   .gnav{justify-content:flex-end}
   .gnav:has(#g-next[hidden]){display:none}
   #screen-guide .step{scroll-margin-top:84px}
@@ -516,31 +546,36 @@
 
   <section class="step" data-step="3" hidden>
     <h2 tabindex="-1">What happened?</h2>
-    <p class="why">Tell it the way you'd tell a colleague. Each answer becomes one slide, and the
-      details underneath become its bullet points. Only the first is required.</p>
+    <p class="why">Tell it the way you'd tell a colleague &mdash; or paste an email or notes. Your slides
+      build themselves below as you write, using your own words.</p>
 
-    <div class="modeswitch" role="tablist" aria-label="How to answer">
-      <button type="button" role="tab" id="g-mode-free" aria-selected="true">Just tell me what happened</button>
-      <button type="button" role="tab" id="g-mode-prompts" aria-selected="false">Point by point</button>
+    <label class="field" for="g-freetext">In your own words</label>
+    <textarea id="g-freetext" rows="7" placeholder="e.g. Since March the backlog has doubled, from 210 to 430 open cases. The median wait is now 19 days. This matters because complaints have tripled. But the current team can't absorb it, and two analysts left in August. We plan to clear the oldest cases first by December. We need approval to hire two more analysts."></textarea>
+    <div class="freeactions">
+      <button type="button" class="secondary ai-only" id="g-sort-ai" hidden>&#10022; Sort again with on-device AI</button>
+      <span class="sortnote" id="g-sort-note" role="status"></span>
     </div>
 
-    <div id="g-free">
-      <label class="field" for="g-freetext">In your own words
-        <span class="hint">Paste an email, notes, or just type. Full sentences work best.</span></label>
-      <textarea id="g-freetext" rows="9" placeholder="e.g. Since March the backlog has doubled, from 210 to 430 open cases. The median wait is now 19 days. This matters because complaints have tripled. But the current team can't absorb it, and two analysts left in August. We plan to clear the oldest cases first by December. We need approval to hire two more analysts."></textarea>
-      <div class="freeactions">
-        <button type="button" id="g-sort">Sort it into slides</button>
-        <button type="button" class="secondary ai-only" id="g-sort-ai" hidden>&#10022; Sort with on-device AI</button>
-        <span class="sortnote" id="g-sort-note" role="status"></span>
+    <div class="slideprev">
+      <div class="sp-head">
+        <h3 id="g-slides-h">Your slides</h3>
+        <span class="sp-count" id="g-slides-count"></span>
       </div>
+      <div class="sp-stale" id="g-stale" hidden>
+        You've edited these slides, so changes to the text above aren't applied automatically.
+        <button type="button" class="linkbtn" id="g-resort">Re-sort from the text</button>
+      </div>
+      <div class="sp-empty" id="g-slides-empty">
+        <div class="sp-ghost" aria-hidden="true"><i></i><i></i><i></i></div>
+        <p>Start writing above &mdash; each thing that happened becomes a slide here, with your numbers and
+          examples as its bullet points.</p>
+        <p><button type="button" class="linkbtn" id="g-use-prompts">Prefer to answer four short questions instead?</button></p>
+      </div>
+      <ol class="sp-list" id="g-beats"></ol>
+      <div class="sp-ask" id="g-ask-card" hidden></div>
+      <button type="button" class="secondary" id="g-add-beat" hidden>+ Add a slide</button>
     </div>
-
-    <div id="g-prompts" hidden>
-    <div class="sorted-banner" id="g-sorted-banner" hidden></div>
-    <div id="g-beats"></div>
-    <button type="button" class="secondary" id="g-add-beat">+ Add another point</button>
-    </div>
-    <p class="field-error" id="g-beats-error" hidden>Add at least one point — what happened, in a sentence.</p>
+    <p class="field-error" id="g-beats-error" hidden>Write a sentence or two about what happened first.</p>
   </section>
 
   <section class="step" data-step="4" hidden>
@@ -1888,44 +1923,85 @@ var BEATS = [
 var beats = [];
 var step = 1, STEPS = 5;
 
-function blankBeats(){
+function blankBeats(){ beats = []; beatsEdited = false; }
+function promptBeats(){
   beats = [];
   for (var i = 0; i < BEATS.length; i++) beats.push({ headline: "", detail: "" });
 }
 
-function renderBeats(){
+/* Step 3 shows the slides themselves: one card per point, in your words, editable in place. */
+var beatsEdited = false;      /* once a person edits a card, typing above stops re-sorting */
+
+function renderBeats(freshFrom){
   var box = document.getElementById("g-beats");
   box.innerHTML = "";
+  var filled = beats.some(function(b){ return b.headline.trim() || b.detail.trim(); });
+  var any = beats.length > 0;
+  document.getElementById("g-slides-empty").hidden = any;
+  document.getElementById("g-add-beat").hidden = !any;
+  /* Deck order: title, then "why we are here" if there is a purpose, then these, then the ask. */
+  var first = document.getElementById("g-purpose").value.trim() ? 3 : 2;
   beats.forEach(function(b, i){
-    var spec = (b.kind && KINDS[b.kind])
-      ? { q: KINDS[b.kind].q, ph: "One sentence", dph: "Details, one per line" }
-      : (BEATS[i] || { q: "Anything else they must know?", ph: "One sentence", dph: "Details, one per line" });
-    var card = document.createElement("div");
-    card.className = "beat";
-    var q = document.createElement("p"); q.className = "q";
-    var num = document.createElement("span"); num.className = "num"; num.textContent = String(i + 1);
-    var lab = document.createElement("label"); lab.htmlFor = "g-beat-" + i; lab.textContent = spec.q;
-    q.appendChild(num); q.appendChild(lab);
-    if (i > 0 && !b.kind){ var opt = document.createElement("span"); opt.className = "opt"; opt.textContent = "optional"; q.appendChild(opt); }
+    var spec = (b.kind && KINDS[b.kind]) ? { label: KINDS[b.kind].label, ph: "Headline for this slide" }
+      : (BEATS[i] ? { label: BEATS[i].q, ph: BEATS[i].ph } : { label: "Another point", ph: "Headline for this slide" });
+    var li = document.createElement("li");
+    li.className = "sp-card" + (typeof freshFrom === "number" && i >= freshFrom ? " fresh" : "");
+    var meta = document.createElement("div"); meta.className = "sp-meta";
+    var no = document.createElement("span"); no.className = "sp-no"; no.textContent = "Slide " + (i + first);
+    var kind = document.createElement("span"); kind.className = "sp-kind"; kind.textContent = spec.label;
+    meta.appendChild(no); meta.appendChild(kind);
     var inp = document.createElement("input");
-    inp.type = "text"; inp.id = "g-beat-" + i; inp.placeholder = spec.ph; inp.value = b.headline;
-    inp.addEventListener("input", function(){ beats[i].headline = inp.value;
-      document.getElementById("g-beats-error").hidden = true; });
-    var dl = document.createElement("label"); dl.className = "detail-label"; dl.htmlFor = "g-detail-" + i;
-    dl.textContent = "Details or numbers that back it up — one per line";
+    inp.type = "text"; inp.className = "sp-title"; inp.id = "g-beat-" + i; inp.value = b.headline;
+    inp.placeholder = spec.ph; inp.setAttribute("aria-label", "Slide " + (i + first) + " headline");
+    inp.addEventListener("input", function(){
+      beats[i].headline = inp.value; markBeatsEdited();
+      document.getElementById("g-beats-error").hidden = true; paintSlidesCount();
+    });
     var ta = document.createElement("textarea");
-    ta.id = "g-detail-" + i; ta.rows = 2; ta.placeholder = spec.dph; ta.value = b.detail;
-    ta.addEventListener("input", function(){ beats[i].detail = ta.value; });
-    card.appendChild(q); card.appendChild(inp); card.appendChild(dl); card.appendChild(ta);
-    if (i >= BEATS.length || (b.kind && beats.length > 1)){
-      var rm = document.createElement("button");
-      rm.type = "button"; rm.className = "ghost remove"; rm.textContent = "Remove";
-      rm.setAttribute("aria-label", "Remove point " + (i + 1));
-      rm.addEventListener("click", function(){ beats.splice(i, 1); renderBeats(); });
-      card.appendChild(rm);
-    }
-    box.appendChild(card);
+    ta.className = "sp-points"; ta.id = "g-detail-" + i;
+    ta.rows = Math.max(1, b.detail ? b.detail.split("\n").length : 1);
+    ta.value = b.detail ? b.detail.split("\n").map(function(d){ return "\u2022 " + d.replace(/^\s*[-*\u2022]\s*/, ""); }).join("\n") : "";
+    ta.placeholder = "Bullet points \u2014 numbers or examples that back it up, one per line";
+    ta.setAttribute("aria-label", "Slide " + (i + first) + " bullet points");
+    ta.addEventListener("input", function(){
+      beats[i].detail = ta.value.split("\n").map(function(d){ return d.replace(/^\s*[-*\u2022]\s*/, ""); }).join("\n");
+      ta.rows = Math.max(1, ta.value.split("\n").length);
+      markBeatsEdited();
+    });
+    var x = document.createElement("button");
+    x.type = "button"; x.className = "sp-x"; x.textContent = "\u00D7";
+    x.setAttribute("aria-label", "Remove slide " + (i + 3));
+    x.addEventListener("click", function(){ beats.splice(i, 1); markBeatsEdited(); renderBeats(); paintNext(); });
+    li.appendChild(meta); li.appendChild(inp); li.appendChild(ta); li.appendChild(x);
+    box.appendChild(li);
   });
+  paintAskCard();
+  paintSlidesCount();
+}
+
+function paintSlidesCount(){
+  var n = beats.filter(function(b){ return b.headline.trim(); }).length;
+  var pur = document.getElementById("g-purpose").value.trim();
+  document.getElementById("g-slides-count").textContent = n
+    ? n + " content slide" + (n === 1 ? "" : "s") + " \u00B7 " + (n + 2 + (pur ? 1 : 0)) + " in the deck with the title" +
+      (pur ? ", why we are here" : "") + " and the ask" : "";
+}
+
+function paintAskCard(){
+  var card = document.getElementById("g-ask-card");
+  var pur = document.getElementById("g-purpose").value.trim();
+  card.hidden = !beats.length;
+  card.innerHTML = "";
+  var b = document.createElement("b"); b.textContent = "Last slide \u2014 the ask";
+  var t = document.createElement("span");
+  t.textContent = pur || "Not set yet \u2014 add it in step 2, or write a sentence above like \u201CWe need approval to\u2026\u201D";
+  card.appendChild(b); card.appendChild(t);
+}
+
+function markBeatsEdited(){
+  if (!document.getElementById("g-freetext").value.trim()) return;   /* nothing to re-sort from */
+  beatsEdited = true;
+  document.getElementById("g-stale").hidden = false;
 }
 
 function guidedFromBrief(){
@@ -1942,8 +2018,7 @@ function guidedFromBrief(){
     if (i < beats.length) beats[i] = b; else beats.push(b);
   });
   renderBeats();
-  document.getElementById("g-sorted-banner").hidden = true;
-  setGuideMode(msgs.length ? "prompts" : "free");
+  document.getElementById("g-stale").hidden = true;
 }
 
 function guidedStyle(){
@@ -2025,20 +2100,11 @@ function renderReview(){
 function validStep(n){
   if (n === 3){
     var ok = beats.some(function(b){ return b.headline.trim(); });
-    var freeOpen = !document.getElementById("g-free").hidden;
-    if (freeOpen && document.getElementById("g-freetext").value.trim()){
-      /* Sort first and show the result, so nothing is built from text nobody has looked at. */
-      document.getElementById("g-sort").click();
-      return false;
-    }
-    if (!ok && freeOpen){
-      document.getElementById("g-sort-note").textContent =
-        "Write a few sentences about what happened, or switch to point by point.";
-      document.getElementById("g-freetext").focus();
-      return false;
-    }
     document.getElementById("g-beats-error").hidden = ok;
-    if (!ok) document.getElementById("g-beat-0").focus();
+    if (!ok){
+      var first = document.getElementById("g-beat-0");
+      (first || document.getElementById("g-freetext")).focus();
+    }
     return ok;
   }
   return true;
@@ -2110,7 +2176,7 @@ function goStep(n){
   var nav = document.querySelector("#screen-guide .stepnav");
   sec.parentNode.insertBefore(nav, sec.nextSibling);
   var first = step === 3
-    ? (document.getElementById("g-free").hidden ? document.getElementById("g-beat-0") : document.getElementById("g-freetext"))
+    ? ((beats.length && !document.getElementById("g-freetext").value.trim()) ? document.getElementById("g-beat-0") : document.getElementById("g-freetext"))
     : sec.querySelector("input[type=text], textarea");
   if (first && step !== STEPS) first.focus({ preventScroll: true }); else sec.querySelector("h2").focus({ preventScroll: true });
   var calm = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -2132,10 +2198,8 @@ function paintNext(){
     else { label = editing ? "Done" : "Skip this question"; quiet = true; }
   } else if (step === 3){
     var sorted = beats.some(function(b){ return b.headline.trim(); });
-    var freeOpen = !document.getElementById("g-free").hidden;
-    if (freeOpen) show = false;                         /* "Sort it into slides" is the action here */
-    else if (!sorted) show = false;
-    else label = editing ? "Done" : "These look right \u2014 continue";
+    if (!sorted) show = false;                          /* nothing to continue with yet */
+    else label = editing ? "Done" : "These slides look right \u2014 continue";
   } else if (step === 4){
     var names = { operational: "Operational", executive: "Executive", workshop: "Workshop" };
     label = (editing ? "Done \u2014 keep " : "Continue with ") + names[guidedStyle()] + " style";
@@ -2151,6 +2215,7 @@ function paintNext(){
 ["g-audience", "g-purpose"].forEach(function(id){
   document.getElementById(id).addEventListener("input", paintNext);
 });
+document.getElementById("g-purpose").addEventListener("input", function(){ autoAsk = ""; renderBeats(); });
 document.getElementById("g-beats").addEventListener("input", paintNext);
 
 /* Picking an answer moves on by itself, after a short pause so the choice is seen. */
@@ -2200,7 +2265,8 @@ document.getElementById("g-back").addEventListener("click", function(){
 });
 document.getElementById("g-add-beat").addEventListener("click", function(){
   beats.push({ headline: "", detail: "" });
-  renderBeats();
+  markBeatsEdited();
+  renderBeats(beats.length - 1);
   document.getElementById("g-beat-" + (beats.length - 1)).focus();
 });
 document.getElementById("g-skip").addEventListener("click", function(){
@@ -2364,51 +2430,51 @@ function sortFreeText(text, haveAsk, classify){
   };
 }
 
-function setGuideMode(mode){
-  var free = mode === "free";
-  setTimeout(paintNext, 0);
-  document.getElementById("g-free").hidden = !free;
-  document.getElementById("g-prompts").hidden = free;
-  document.getElementById("g-mode-free").setAttribute("aria-selected", free);
-  document.getElementById("g-mode-prompts").setAttribute("aria-selected", !free);
-}
+/* As the person writes, their sentences are sorted into slides below, live. Sorting only
+   splits and places their own words. Once they edit a slide by hand, typing above stops
+   overwriting it until they choose to re-sort. */
+var autoAsk = "";          /* the ask sorting took from the text, so it can follow later edits */
 
 function applySorted(res, how){
   var note = document.getElementById("g-sort-note");
-  if (!res.beats.length){
-    note.textContent = res.ask
-      ? "That reads like your ask, but there's nothing yet about what happened. Add a sentence or two."
-      : "Nothing to sort yet — write a few sentences about what happened.";
-    if (res.ask) document.getElementById("g-purpose").value = res.ask;
-    return;
+  var before = beats.length;
+  var purpose = document.getElementById("g-purpose");
+  if (res.ask && (!purpose.value.trim() || purpose.value.trim() === autoAsk)){
+    purpose.value = res.ask; autoAsk = res.ask;
+  } else if (!res.ask && autoAsk && purpose.value.trim() === autoAsk){
+    purpose.value = ""; autoAsk = "";
   }
   beats = res.beats;
-  var askMsg = "";
-  if (res.ask){
-    document.getElementById("g-purpose").value = res.ask;
-    askMsg = " and took “" + res.ask + "” as your ask";
-  }
-  var banner = document.getElementById("g-sorted-banner");
-  banner.hidden = false;
-  banner.textContent = "Sorted " + res.sentences + " sentence" + (res.sentences === 1 ? "" : "s") +
-    " into " + res.beats.length + " slide" + (res.beats.length === 1 ? "" : "s") + askMsg + ". " +
-    (how === "ai"
-      ? "The on-device AI chose where each sentence goes; your wording is unchanged. Move or edit anything that landed in the wrong place."
-      : "Sorting goes by keywords, so move or edit anything that landed in the wrong place.");
-  note.textContent = "";
-  renderBeats();
-  setGuideMode("prompts");
+  beatsEdited = false;
+  document.getElementById("g-stale").hidden = true;
+  renderBeats(before);
+  note.textContent = how === "ai" && res.beats.length
+    ? "Sorted by the on-device AI \u2014 your wording is unchanged. Edit any slide below."
+    : "";
   document.getElementById("g-beats-error").hidden = true;
-  var calm = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (banner.scrollIntoView) banner.scrollIntoView({ block: "center", behavior: calm ? "auto" : "smooth" });
+  paintNext();
+  paintSummaries();
 }
 
-document.getElementById("g-sort").addEventListener("click", function(){
-  var haveAsk = !!document.getElementById("g-purpose").value.trim();
-  applySorted(sortFreeText(document.getElementById("g-freetext").value, haveAsk), "rules");
+function liveSort(){
+  if (beatsEdited) return;
+  var text = document.getElementById("g-freetext").value;
+  var purpose = document.getElementById("g-purpose").value.trim();
+  var haveAsk = !!purpose && purpose !== autoAsk;
+  applySorted(sortFreeText(text, haveAsk), "rules");
+}
+var liveTimer = null;
+document.getElementById("g-freetext").addEventListener("input", function(){
+  if (liveTimer) clearTimeout(liveTimer);
+  liveTimer = setTimeout(liveSort, 350);
 });
-document.getElementById("g-mode-free").addEventListener("click", function(){ setGuideMode("free"); });
-document.getElementById("g-mode-prompts").addEventListener("click", function(){ setGuideMode("prompts"); });
+document.getElementById("g-resort").addEventListener("click", function(){
+  beatsEdited = false; liveSort();
+});
+document.getElementById("g-use-prompts").addEventListener("click", function(){
+  promptBeats(); renderBeats(0); paintNext();
+  document.getElementById("g-beat-0").focus();
+});
 
 /* ---------- Supercharged: optional on-device models, in two tiers ----------
    Nothing here runs unless the person chooses it.
@@ -2976,8 +3042,10 @@ function aiSortFreeText(){
       });
     }
     return next().then(function(){
-      var haveAsk = !!document.getElementById("g-purpose").value.trim();
+      var pur = document.getElementById("g-purpose").value.trim();
+      var haveAsk = !!pur && pur !== autoAsk;     /* an ask taken from this same text can be re-taken */
       applySorted(sortFreeText(text, haveAsk, function(s, idx){ return kinds[idx]; }), "ai");
+      markBeatsEdited();          /* keep the AI's sorting until the person asks to re-sort */
     });
   }).catch(function(err){
     note.textContent = (err && err.message) || "The on-device AI didn't finish.";

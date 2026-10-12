@@ -44,14 +44,17 @@ the two user groups:
 - **I'll write the brief** — straight to the form and the deck, for someone who already
   knows their key messages.
 
-In the guided path, *what happened* opens on a free-text box: **Just tell me what
-happened**. Paste an email or type it the way you'd say it, and **Sort it into slides**
-splits it into sentences and places each one — what happened, why it matters, what is in
-the way, what happens next — with numbers and examples attached as bullets under the
-sentence they back up, and a sentence that asks for a decision taken as the ask. It uses
-keyword rules, not a model, and never rewrites a sentence: it only splits, sorts and
-places the person's own words, so the content check still holds. The result opens point
-by point for the person to move or edit before anything is built.
+In the guided path, *what happened* is a free-text box with the slides building live
+underneath it. Paste an email or type it the way you'd say it, and as you write, your
+sentences are sorted into slide cards — what happened, why it matters, what is in the
+way, what happens next — with numbers and examples attached as bullets under the
+sentence they back up, and a sentence that asks for a decision taken as the ask on the
+last slide. It uses keyword rules, not a model, and never rewrites a sentence: it only
+splits, sorts and places the person's own words, so the content check still holds. Each
+card can be edited, removed or added to in place; once a card is edited by hand, live
+sorting pauses (with a one-click *Re-sort from the text*) so manual changes are never
+overwritten. For people who would rather be prompted, *answer four short questions
+instead* gives four empty cards with a question on each.
 
 The example briefing is never loaded on its own. It sits behind a button — *see a finished
 example first* on the start screen, *Load example* on the brief, *Fill with example
