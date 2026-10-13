@@ -206,6 +206,32 @@ shared. Story 5 is the quality safeguard.
 
 ---
 
+## North Star
+
+**Decisions obtained with a HandsOnDeck deck that was sent as it came out — not rebuilt
+in another tool.** Counted per week.
+
+It joins the two halves of the core job — *get the decision* and *without losing a day to
+formatting* — and it is the direct opposite of the known adoption risk, that people still
+rebuild in PowerPoint. A deck that is generated but rebuilt elsewhere does not count; a
+deck that is sent but doesn't get a decision does not count.
+
+Input metrics that move it:
+
+| Input | What it says |
+| --- | --- |
+| Time from brief to sent deck | The "minutes, not a day" promise (Must 1, Must 3) |
+| Share of decks sent with the ask stated and the content check clean | The deck is fit to act on (Should 4) |
+| Revisions per deck and time per revision | Feedback changes the argument, not the deck (Must 2) |
+| Rebuild rate — decks recreated in another tool | The adoption risk, measured |
+| Return use within 30 days | The deck was good enough to come back for |
+
+Measuring it without breaking the product's position: the app sends nothing, so none of
+this is collected automatically. It comes from the files themselves — every downloaded or
+editable deck carries its version number and edit history in its slide plan — and from a
+short follow-up with pilot users ("Did this go out as it was? Did you get the decision?").
+If telemetry is ever added, it must be opt-in and carry counts, never content.
+
 ## How the stories serve each group
 
 | | Primary — staff officer | Secondary — frontline officer |

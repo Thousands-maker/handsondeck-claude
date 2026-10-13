@@ -232,7 +232,10 @@ works on a plane. It is that nothing leaves the browser.
    Indent a line or start it with a dash to make it a supporting point under the message
    above.
 2. **Generate deck.**
-3. Click any headline or bullet on the slide to edit it in place.
+3. Click any headline or bullet on the slide to edit it in place. Move slides with the
+   Move buttons, by dragging a thumbnail, or `move slide 4 to 2` in chat — the brief follows
+   the new order. Structure suggestions (missing name or ask, crowded slides, too many
+   points, wording not in the brief) sit above the deck; they are advice and never block.
 4. Refine by chat: `cut to 5 slides` · `delete slide 4` ·
    `make slide 3 say Latency is the binding constraint` ·
    `add to slide 2: measured over 11 weeks` · `style executive` ·

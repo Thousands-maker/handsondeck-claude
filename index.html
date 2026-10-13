@@ -291,6 +291,7 @@
   .panelhead h2{font-size:16px; margin:0; font-weight:650}
   .panelhead .spacer{flex:1}
   .counter{font-size:12.5px; color:var(--muted); margin-top:6px; font-variant-numeric:tabular-nums}
+  .counter.over{color:#8a5a00}
   .actions{position:sticky; bottom:-20px; margin:20px -20px -20px; padding:14px 20px 20px;
     background:linear-gradient(to bottom, rgba(255,255,255,.92), #fff 30%); border-top:1px solid var(--rule);
     display:flex; gap:8px; flex-wrap:wrap; align-items:center; z-index:2}
@@ -325,6 +326,19 @@
   .outhead .exports{display:flex; gap:8px; padding:8px 0}
   .statusrow{display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; padding:12px 18px 0}
   .check{font-size:13px; padding:6px 11px; border-radius:999px; display:inline-flex; gap:7px; align-items:center}
+  .advice{position:relative}
+  .advchip{font-size:13px; font-weight:600; padding:6px 12px; border-radius:999px; border:1px solid transparent}
+  .advchip.ok{background:var(--accent-soft); color:#0d5157; cursor:default; opacity:1}
+  .advchip.ok::before{content:"\2713  "}
+  .advchip.has{background:#fbf3e2; color:#6d4a00; border-color:#ecd7a6}
+  .advchip.has::after{content:"  \25BE"}
+  .advchip.has:hover{background:#f7e8c8}
+  .advlist{position:absolute; z-index:30; top:calc(100% + 6px); left:0; width:min(440px, 86vw); background:var(--paper);
+    border:1px solid var(--rule); border-radius:var(--radius-sm); box-shadow:0 10px 30px rgba(22,23,29,.16); padding:6px}
+  .advrow{display:flex; gap:10px; align-items:baseline; justify-content:space-between; padding:9px 10px; font-size:13.5px;
+    border-bottom:1px solid var(--rule)}
+  .advrow .linkbtn{font-size:13px; white-space:nowrap}
+  .advnote{margin:6px 10px 4px; font-size:12px; color:var(--muted)}
   .check:empty{display:none}
   .check::before{content:""; width:8px; height:8px; border-radius:50%; flex:none}
   .check.good{background:var(--accent-soft); color:#0d5157}
@@ -348,6 +362,9 @@
   .strip button .st{display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden}
   .strip button.title{background:var(--saccent,var(--primary)); color:#fff; border-color:transparent}
   .strip button.title .sn{color:rgba(255,255,255,.75)}
+  .strip button.dragging{opacity:.45}
+  .strip button.droptarget{box-shadow:-4px 0 0 0 var(--accent)}
+  .strip button[draggable=true]{cursor:grab}
   .strip button[aria-current="true"]{box-shadow:0 0 0 2px var(--primary); border-color:var(--primary)}
   .editnote{font-size:13px; color:var(--muted); margin:12px 0 0}
   .empty{text-align:center; padding:56px 20px 64px; color:var(--ink-2)}
@@ -515,19 +532,19 @@
   </div>
 
   <div class="paths">
-    <button type="button" class="card recommended" id="path-guide">
-      <span class="tag">Guided · about 3 minutes</span>
-      <h2>Walk me through it</h2>
-      <p>Answer five short questions about who it's for, what happened and what you need.
-        Best if you know the story but not how to put it on slides.</p>
-      <span class="go">Start guided &rarr;</span>
+    <button type="button" class="card recommended" id="path-brief">
+      <span class="tag">You know your argument</span>
+      <h2>I know what I need to say</h2>
+      <p>Put in the decision you need, who decides, and your key points. Get a deck to review,
+        edit and send &mdash; in minutes, not a day of formatting.</p>
+      <span class="go">Start with the brief &rarr;</span>
     </button>
-    <button type="button" class="card" id="path-brief">
-      <span class="tag">Direct</span>
-      <h2>I'll write the brief</h2>
-      <p>Go straight to the brief form and the deck. Best if you already know your key
-        messages and want control.</p>
-      <span class="go">Open the brief &rarr;</span>
+    <button type="button" class="card" id="path-guide">
+      <span class="tag">Guided</span>
+      <h2>Help me shape it</h2>
+      <p>Not sure how to frame it yet? Tell it what's happening in your own words, or answer a
+        few short questions, and see the slides form as you go.</p>
+      <span class="go">Start guided &rarr;</span>
     </button>
   </div>
 
@@ -539,7 +556,7 @@
 
   <p class="buildstamp" id="buildstamp"></p>
   <div class="how">
-    <div><span class="n">1</span><b>Tell it plainly</b>Who's in the room, what happened, what you need from them.</div>
+    <div><span class="n">1</span><b>Say what you need decided</b>Who decides, what you need from them, and the points that get you there.</div>
     <div><span class="n">2</span><b>Get real slides</b>Every line on a slide traces back to something you wrote. Nothing is invented.</div>
     <div><span class="n">3</span><b>Edit and send</b>Click any line to change it, then send a file someone can edit with nothing installed.</div>
   </div>
@@ -771,16 +788,16 @@
       <span class="hint">Goes on the cover slide.</span></label>
     <input type="text" id="f-title" placeholder="e.g. Operational Readiness Review — Q3">
 
-    <label class="field" for="f-purpose">Purpose
-      <span class="hint">What should happen after this deck?</span></label>
-    <input type="text" id="f-purpose" placeholder="e.g. Get approval to extend the pilot">
+    <label class="field" for="f-purpose">Decision or endorsement you need
+      <span class="hint">Becomes the ask on the last slide.</span></label>
+    <input type="text" id="f-purpose" placeholder="e.g. Approval to extend the pilot to two more divisions">
 
-    <label class="field" for="f-audience">Audience</label>
+    <label class="field" for="f-audience">Who will read it or decide?</label>
     <input type="text" id="f-audience" placeholder="e.g. Divisional directors">
 
     <label class="field" for="f-messages">Key messages
-      <span class="hint">One per line — each becomes a slide. Start a line with a dash to add a
-      supporting point under the message above it.</span></label>
+      <span class="hint">One per line &mdash; each becomes a slide; 3&ndash;6 works best for a decision.
+      Start a line with a dash to add evidence under the point above it.</span></label>
     <textarea id="f-messages" rows="9" placeholder="The pilot cut triage time from 40 minutes to 12&#10;- Measured across 1,430 cases&#10;Two constraints must be resolved before we scale&#10;- Data retention rules differ"></textarea>
     <div class="counter" id="msg-counter">No messages yet</div>
 
@@ -839,6 +856,10 @@
     </div>
 
     <div class="statusrow">
+      <div class="advice" id="advice" hidden>
+        <button type="button" class="advchip" id="advice-btn" aria-expanded="false"></button>
+        <div class="advlist" id="advice-list" hidden></div>
+      </div>
       <div class="check" id="content-check" role="status"></div>
       <p class="version" id="version-note"></p>
     </div>
@@ -860,6 +881,8 @@
           <span class="timing" id="timing"></span>
           <span class="spacer"></span>
           <button class="secondary" id="btn-undo" disabled>Undo</button>
+          <button class="secondary" id="btn-move-l" title="Move this slide earlier" aria-label="Move this slide earlier">&#9666; Move</button>
+          <button class="secondary" id="btn-move-r" title="Move this slide later" aria-label="Move this slide later">Move &#9656;</button>
           <button class="danger" id="btn-delete">Delete slide</button>
         </div>
         <div class="strip" id="strip" aria-label="All slides"></div>
@@ -885,6 +908,7 @@
       </div>
       <div class="examples" id="chat-help" aria-label="Example commands">
         <button type="button">cut to 5 slides</button>
+        <button type="button">move slide 4 to 2</button>
         <button type="button">delete slide 4</button>
         <button type="button">make slide 3 say …</button>
         <button type="button">add to slide 2: …</button>
@@ -1151,6 +1175,7 @@ function showSlide(n){
   slides[current].classList.add("on");
   document.getElementById("count").textContent =
     "Slide " + (current + 1) + " of " + slides.length;
+  paintMoveButtons();
   var thumbs = document.querySelectorAll("#strip button");
   for (var k = 0; k < thumbs.length; k++){
     thumbs[k].setAttribute("aria-current", k === current ? "true" : "false");
@@ -1164,6 +1189,30 @@ function showSlide(n){
   }
 }
 
+/* Reordering: the cover stays first; everything else can move. The brief follows the new
+   order, so nothing lives only in the slides. */
+function moveSlide(from, to){
+  if (!plan) return false;
+  var n = plan.slides.length;
+  if (from < 1 || from >= n) return false;
+  to = Math.max(1, Math.min(n - 1, to));
+  if (to === from) return false;
+  snapshot();
+  var moved = plan.slides.splice(from, 1)[0];
+  plan.slides.splice(to, 0, moved);
+  syncFormFromPlan(); recheckContent(); refreshPlanView(); refreshContentCheck(); markEdited();
+  renderDeck(to);
+  return true;
+}
+function paintMoveButtons(){
+  if (!plan) return;
+  document.getElementById("btn-move-l").disabled = current <= 1;
+  document.getElementById("btn-move-r").disabled = current < 1 || current >= plan.slides.length - 1;
+}
+document.getElementById("btn-move-l").addEventListener("click", function(){ moveSlide(current, current - 1); });
+document.getElementById("btn-move-r").addEventListener("click", function(){ moveSlide(current, current + 1); });
+
+var dragFrom = null;
 function renderStrip(){
   var strip = document.getElementById("strip");
   var st = STYLES[plan.meta.style] || STYLES.operational;
@@ -1180,7 +1229,20 @@ function renderStrip(){
     var isAI = (plan.meta.aiReworded || []).indexOf(s.title) !== -1;
     t.textContent = (isAI ? "\u2726 " : "") + (s.title || (s.type === "title" ? "Meeting name?" : ""));
     b.appendChild(n); b.appendChild(t);
-    (function(idx){ b.addEventListener("click", function(){ showSlide(idx); }); })(i);
+    (function(idx){
+      b.addEventListener("click", function(){ showSlide(idx); });
+      if (idx === 0) return;
+      /* Drag a thumbnail to reorder (mouse); the Move buttons do the same on touch. */
+      b.draggable = true;
+      b.title = "Drag to reorder";
+      b.addEventListener("dragstart", function(e){ dragFrom = idx; b.classList.add("dragging");
+        try { e.dataTransfer.setData("text/plain", String(idx)); e.dataTransfer.effectAllowed = "move"; } catch (err){} });
+      b.addEventListener("dragend", function(){ dragFrom = null; b.classList.remove("dragging"); });
+      b.addEventListener("dragover", function(e){ if (dragFrom === null) return; e.preventDefault(); b.classList.add("droptarget"); });
+      b.addEventListener("dragleave", function(){ b.classList.remove("droptarget"); });
+      b.addEventListener("drop", function(e){ e.preventDefault(); b.classList.remove("droptarget");
+        if (dragFrom !== null && dragFrom !== idx){ var f = dragFrom; dragFrom = null; moveSlide(f, idx); } });
+    })(i);
     strip.appendChild(b);
   }
 }
@@ -1301,6 +1363,8 @@ function refreshWarnings(){
   var box = document.getElementById("warnings");
   box.innerHTML = "";
   if (!plan) return;
+  paintAdvice();
+  return;          /* structure advice now lives above the deck, next to the content check */
   for (var i = 0; i < plan.warnings.length; i++){
     var d = document.createElement("div");
     d.className = "warn";
@@ -1309,7 +1373,81 @@ function refreshWarnings(){
   }
 }
 
+/* Structure suggestions: a missing name or ask, crowded slides, too many points, and wording
+   that isn't in the brief. Advice only: nothing here stops a deck being generated or sent. */
+function adviseStructure(){
+  var out = [];
+  if (!plan) return out;
+  var S = plan.slides;
+  if (!String(S[0].title || "").trim()) out.push({ slide: 0, text: "No meeting name on the cover yet." });
+  var close = -1;
+  S.forEach(function(x, i){ if (x.type === "close") close = i; });
+  if (close === -1 || !(S[close].support && S[close].support.length && String(S[close].support[0]).trim())){
+    out.push({ slide: close >= 0 ? close : null, text: "No ask yet \u2014 say what you need them to decide or endorse." });
+  }
+  var points = S.filter(function(x){ return x.type === "point"; }).length;
+  if (points > 6){
+    out.push({ slide: null, text: points + " key messages \u2014 decision decks land best with 3\u20136. Try merging some, or \u201Ccut to " +
+      (S.length - (points - 6)) + " slides\u201D in Refine by chat." });
+  }
+  S.forEach(function(x, i){
+    if (x.type !== "point") return;
+    var sup = x.support || [];
+    var words = sup.join(" ").split(/\s+/).filter(Boolean).length;
+    if (sup.length > 4 || words > 70){
+      out.push({ slide: i, text: "Slide " + (i + 1) + " is crowded (" + sup.length + " bullets, " + words + " words) \u2014 consider splitting it." });
+    } else if (String(x.title || "").split(/\s+/).length > 16){
+      out.push({ slide: i, text: "Slide " + (i + 1) + " has a long headline \u2014 shorten it so it reads at a glance." });
+    }
+  });
+  var nt = (plan.meta.contentCheck && plan.meta.contentCheck.notTraced) || [];
+  nt.forEach(function(str){
+    var idx = -1;
+    S.forEach(function(x, i){ if (idx === -1 && (x.title === str || x.subtitle === str || (x.support || []).indexOf(str) !== -1)) idx = i; });
+    out.push({ slide: idx >= 0 ? idx : null, text: (idx >= 0 ? "Slide " + (idx + 1) + " has" : "There is") +
+      " wording that isn't in your brief: \u201C" + String(str).slice(0, 48) + (String(str).length > 48 ? "\u2026" : "") + "\u201D" });
+  });
+  return out;
+}
+
+function paintAdvice(){
+  var wrap = document.getElementById("advice");
+  if (!plan){ wrap.hidden = true; return; }
+  var items = adviseStructure();
+  wrap.hidden = false;
+  var btn = document.getElementById("advice-btn"), list = document.getElementById("advice-list");
+  btn.className = "advchip " + (items.length ? "has" : "ok");
+  btn.textContent = items.length ? items.length + (items.length === 1 ? " suggestion" : " suggestions") : "Structure looks good";
+  btn.disabled = !items.length;
+  if (!items.length){ list.hidden = true; btn.setAttribute("aria-expanded", "false"); }
+  list.innerHTML = "";
+  items.forEach(function(it){
+    var row = document.createElement("div"); row.className = "advrow";
+    var t = document.createElement("span"); t.textContent = it.text; row.appendChild(t);
+    if (it.slide !== null){
+      var go = document.createElement("button"); go.type = "button"; go.className = "linkbtn";
+      go.textContent = "Show me";
+      go.addEventListener("click", function(){ selectTab("deck"); showSlide(it.slide); list.hidden = true; btn.setAttribute("aria-expanded", "false"); });
+      row.appendChild(go);
+    }
+    list.appendChild(row);
+  });
+  var note = document.createElement("p"); note.className = "advnote";
+  note.textContent = "Suggestions only \u2014 they never stop you downloading or sending.";
+  list.appendChild(note);
+}
+document.getElementById("advice-btn").addEventListener("click", function(){
+  var list = document.getElementById("advice-list");
+  list.hidden = !list.hidden;
+  this.setAttribute("aria-expanded", String(!list.hidden));
+});
+document.addEventListener("click", function(e){
+  var a = document.getElementById("advice");
+  if (a && !a.contains(e.target)){ document.getElementById("advice-list").hidden = true; document.getElementById("advice-btn").setAttribute("aria-expanded", "false"); }
+});
+
 function refreshContentCheck(){
+  paintAdvice();
   var box = document.getElementById("content-check");
   if (!plan || !plan.meta.contentCheck){ box.textContent = ""; return; }
   var cc = plan.meta.contentCheck;
@@ -1400,6 +1538,17 @@ function handleChat(raw){
     return;
   }
 
+  if ((m = t.match(/^move slide (\d+) (?:to|before) (?:position |slide )?(\d+)/)) ||
+      (m = t.match(/^move slide (\d+) (up|down|earlier|later|forward|back)/))){
+    const from = parseInt(m[1], 10) - 1;
+    const to = /^\d+$/.test(m[2]) ? parseInt(m[2], 10) - 1 : from + (/up|earlier|forward/.test(m[2]) ? -1 : 1);
+    if (!plan.slides[from]){ say("HandsOnDeck", "There is no slide " + (from + 1) + ".", true); return; }
+    if (from === 0){ say("HandsOnDeck", "The cover stays first. Move another slide instead.", true); return; }
+    if (!moveSlide(from, to)){ say("HandsOnDeck", "That slide is already there.", true); return; }
+    say("HandsOnDeck", "Moved it to slide " + (current + 1) + ". The brief follows the new order.");
+    return;
+  }
+
   if ((m = t.match(/^(?:delete|remove|drop) slide (\d+)/))){
     const n = parseInt(m[1], 10) - 1;
     if (!plan.slides[n]){ say("HandsOnDeck", "There is no slide " + (n+1) + ".", true); return; }
@@ -1453,7 +1602,7 @@ function handleChat(raw){
   }
 
   if (/^(help|what can you do)/.test(t)){
-    say("HandsOnDeck", "I can cut the deck to a length, delete a slide, change a headline, add a supporting point, change style, make the ask explicit, or undo. Everything I do writes to the slide plan and back into your brief.");
+    say("HandsOnDeck", "I can cut the deck to a length, move or delete a slide, change a headline, add a supporting point, change style, make the ask explicit, or undo. Everything I do writes to the slide plan and back into your brief.");
     return;
   }
 
@@ -1551,12 +1700,16 @@ function deleteSlide(){
 }
 
 /* A deck shouldn't leave without a name on its cover: point at the spot to fill in. */
+var titleNudgedAt = 0;
 function needsTitle(){
   if (plan && plan.slides[0] && String(plan.slides[0].title || "").trim()) return false;
+  /* Advice, not a gate: a second click within a few seconds goes ahead without a name. */
+  if (Date.now() - titleNudgedAt < 20000) return false;
+  titleNudgedAt = Date.now();
   selectTab("deck");
   showSlide(0);
   var h = document.querySelector('#stage .slide.title h3');
-  notify("Add the meeting name on the cover slide first \u2014 it also names the file.", "Add it", function(){
+  notify("No meeting name on the cover yet. Add it \u2014 or click again to go ahead without one.", "Add it", function(){
     showSlide(0); var t = document.querySelector('#stage .slide.title h3'); if (t) t.focus();
   });
   if (h) h.focus();
@@ -2003,7 +2156,9 @@ function updateCounter(){
   var sup = msgs.reduce(function(n, m){ return n + m.support.length; }, 0);
   var slides = msgs.length + 2 + (document.getElementById("f-purpose").value.trim() ? 1 : 0);
   box.textContent = msgs.length + (msgs.length === 1 ? " message" : " messages") + " · " +
-    sup + " supporting point" + (sup === 1 ? "" : "s") + " → " + slides + " slides";
+    sup + " supporting point" + (sup === 1 ? "" : "s") + " → " + slides + " slides" +
+    (msgs.length > 6 ? " · 3–6 messages works best for a decision" : "");
+  box.classList.toggle("over", msgs.length > 6);
 }
 document.getElementById("f-messages").addEventListener("input", updateCounter);
 document.getElementById("f-purpose").addEventListener("input", updateCounter);
