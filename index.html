@@ -245,7 +245,8 @@
   .check.ai::before{background:#d39b1b}
   .stepnav{display:flex; align-items:center; gap:10px; margin-top:26px; flex-wrap:wrap}
   .slideprev{margin-top:20px; border-top:1px solid var(--rule); padding-top:18px}
-  .sp-head{display:flex; align-items:baseline; gap:10px; margin-bottom:10px}
+  .sp-head{display:flex; align-items:baseline; gap:4px 10px; margin-bottom:10px; flex-wrap:wrap}
+  .sp-head h3{flex:none}
   .sp-head h3{margin:0; font-size:16px}
   .sp-count{font-size:13px; color:var(--muted)}
   .sp-stale{background:var(--warn-bg); color:#6d4a00; font-size:13.5px; border-radius:var(--radius-sm);
@@ -262,12 +263,13 @@
   .sp-no{font-size:11px; font-weight:700; color:var(--muted); letter-spacing:.06em; text-transform:uppercase}
   .sp-kind{font-size:11.5px; font-weight:700; color:var(--primary); background:var(--primary-soft);
     padding:2px 8px; border-radius:999px}
-  .sp-card input.sp-title{border:1px solid transparent; padding:4px 6px; margin-left:-7px; width:calc(100% + 7px);
-    font-size:17px; font-weight:650; background:transparent}
+  .sp-card .sp-title{border:1px solid transparent; padding:4px 6px; margin-left:-7px; width:calc(100% + 7px);
+    font-size:17px; font-weight:650; background:transparent; resize:none; overflow:hidden; line-height:1.35; min-height:0}
   .sp-card textarea.sp-points{border:1px solid transparent; padding:4px 6px; margin-left:-7px; width:calc(100% + 7px);
     min-height:0; font-size:14px; color:var(--ink-2); background:transparent; resize:vertical}
-  .sp-card input.sp-title:hover, .sp-card textarea.sp-points:hover{border-color:var(--rule)}
-  .sp-card input.sp-title:focus, .sp-card textarea.sp-points:focus{border-color:var(--primary); background:#fff}
+  .sp-card .sp-title:hover, .sp-card textarea.sp-points:hover{border-color:var(--rule)}
+  .sp-card .sp-title:focus, .sp-card textarea.sp-points:focus{border-color:var(--primary); background:#fff}
+  .sp-card textarea.sp-points{overflow:hidden; resize:none}
   .sp-card .sp-x{position:absolute; top:8px; right:8px; padding:2px 8px; font-size:16px; line-height:1;
     color:var(--muted); background:transparent; border:0}
   .sp-card .sp-x:hover{color:var(--bad); background:var(--bad-bg)}
@@ -2282,10 +2284,12 @@ function renderBeats(freshFrom){
     var no = document.createElement("span"); no.className = "sp-no"; no.textContent = "Slide " + (i + first);
     var kind = document.createElement("span"); kind.className = "sp-kind"; kind.textContent = spec.label;
     meta.appendChild(no); meta.appendChild(kind);
-    var inp = document.createElement("input");
-    inp.type = "text"; inp.className = "sp-title"; inp.id = "g-beat-" + i; inp.value = b.headline;
+    var inp = document.createElement("textarea");
+    inp.rows = 1; inp.className = "sp-title"; inp.id = "g-beat-" + i; inp.value = b.headline;
     inp.placeholder = spec.ph; inp.setAttribute("aria-label", "Slide " + (i + first) + " headline");
     inp.addEventListener("input", function(){
+      inp.value = inp.value.replace(/\n/g, " ");
+      fitArea(inp);
       beats[i].headline = inp.value; markBeatsEdited();
       document.getElementById("g-beats-error").hidden = true; paintSlidesCount();
     });
@@ -2297,19 +2301,31 @@ function renderBeats(freshFrom){
     ta.setAttribute("aria-label", "Slide " + (i + first) + " bullet points");
     ta.addEventListener("input", function(){
       beats[i].detail = ta.value.split("\n").map(function(d){ return d.replace(/^\s*[-*\u2022]\s*/, ""); }).join("\n");
-      ta.rows = Math.max(1, ta.value.split("\n").length);
+      fitArea(ta);
       markBeatsEdited();
     });
     var x = document.createElement("button");
     x.type = "button"; x.className = "sp-x"; x.textContent = "\u00D7";
     x.setAttribute("aria-label", "Remove slide " + (i + 3));
     x.addEventListener("click", function(){ beats.splice(i, 1); markBeatsEdited(); renderBeats(); paintNext(); });
+    inp.addEventListener("keydown", function(e){ if (e.key === "Enter"){ e.preventDefault(); ta.focus(); } });
     li.appendChild(meta); li.appendChild(inp); li.appendChild(ta); li.appendChild(x);
     box.appendChild(li);
+    fitArea(inp); fitArea(ta);
   });
   paintAskCard();
   paintSlidesCount();
 }
+
+/* Grow a text box to fit its words, so long headlines wrap instead of being cut off. */
+function fitArea(el){
+  el.style.height = "auto";
+  el.style.height = (el.scrollHeight + 2) + "px";
+}
+window.addEventListener("resize", function(){
+  var els = document.querySelectorAll("#g-beats textarea");
+  for (var i = 0; i < els.length; i++) fitArea(els[i]);
+});
 
 function paintSlidesCount(){
   var n = beats.filter(function(b){ return b.headline.trim(); }).length;
@@ -2742,15 +2758,21 @@ function keywordKind(s){
   return "happened";
 }
 
-/* classify: optional function(sentence) -> kind, used by the on-device model when present */
-function sortFreeText(text, haveAsk, classify){
-  var sentences = [];
+/* The person's text as the list of statements the sorter works on (shared with the AI). */
+function sentencesOf(text){
+  var out = [];
   splitSentences(text).forEach(function(s){
     splitClauses(s.replace(/[.;:,]+$/, "")).forEach(function(c){
       c = tidySentence(c);
-      if (c && !isFiller(c)) sentences.push(c);
+      if (c && !isFiller(c)) out.push(c);
     });
   });
+  return out;
+}
+
+/* classify: optional function(sentence) -> kind, used by the on-device model when present */
+function sortFreeText(text, haveAsk, classify){
+  var sentences = sentencesOf(text);
   var groups = { happened: [], why: [], block: [], next: [] }, asks = [], last = null, ordered = [];
   sentences.forEach(function(s, idx){
     var kind = classify ? classify(s, idx) : keywordKind(s);
@@ -3421,6 +3443,26 @@ function withEngine(){
   });
 }
 
+/* Phones can reset their graphics chip (often after switching apps), which kills the model's
+   connection to it. When a request fails, throw the engine away, start it again and retry
+   once; only if that fails too does the task give up, with a plain message. */
+function resetEngine(){
+  var t = activeTier();
+  if (!t) return;
+  try { if (AI.engine[t] && AI.engine[t].unload) AI.engine[t].unload(); } catch (e){}
+  AI.engine[t] = null; AI.loading[t] = null;
+}
+function askRobust(system, shots, user, maxTokens, onRestart){
+  return withEngine().then(function(engine){ return ask(engine, system, shots, user, maxTokens); })
+    .catch(function(){
+      resetEngine();
+      if (onRestart) onRestart();
+      return withEngine().then(function(engine){ return ask(engine, system, shots, user, maxTokens); });
+    });
+}
+var AI_STOPPED = "The on-device AI stopped \u2014 this device's graphics chip reset, which phones sometimes do " +
+  "after switching apps.";
+
 function ask(engine, system, shots, user, maxTokens){
   var msgs = [{ role: "system", content: system }];
   shots.forEach(function(p){ msgs.push({ role: "user", content: p[0] }, { role: "assistant", content: p[1] }); });
@@ -3445,17 +3487,20 @@ var KIND_WORDS = ["happened", "why", "block", "next", "ask", "detail"];
 function aiSortFreeText(){
   var text = document.getElementById("g-freetext").value;
   var note = document.getElementById("g-sort-note");
-  var sentences = splitSentences(text).map(tidySentence).filter(function(s){ return s && !isFiller(s); });
-  if (!sentences.length){ note.textContent = "Nothing to sort yet — write a few sentences about what happened."; return; }
+  var sentences = sentencesOf(text);
+  if (!sentences.length){ note.textContent = "Nothing to sort yet \u2014 write a few sentences about what happened."; return; }
   var btn = document.getElementById("g-sort-ai");
   btn.disabled = true;
-  withEngine().then(function(engine){
+  note.textContent = "Starting the on-device AI\u2026";
+  Promise.resolve().then(function(){
     var kinds = [], i = 0;
     function next(){
       if (i >= sentences.length) return Promise.resolve();
-      note.textContent = "Reading sentence " + (i + 1) + " of " + sentences.length + " on this device…";
+      note.textContent = "Reading sentence " + (i + 1) + " of " + sentences.length + " on this device\u2026";
       var s = sentences[i];
-      return ask(engine, SORT_SYSTEM, SORT_SHOTS, s, 4).then(function(out){
+      return askRobust(SORT_SYSTEM, SORT_SHOTS, s, 4, function(){
+        note.textContent = "Restarting the on-device AI\u2026";
+      }).then(function(out){
         var w = (out.toLowerCase().match(/[a-z]+/) || [""])[0];
         kinds.push(KIND_WORDS.indexOf(w) !== -1 ? w : keywordKind(s));
         i++; return next();
@@ -3467,8 +3512,9 @@ function aiSortFreeText(){
       applySorted(sortFreeText(text, haveAsk, function(s, idx){ return kinds[idx]; }), "ai");
       markBeatsEdited();          /* keep the AI's sorting until the person asks to re-sort */
     });
-  }).catch(function(err){
-    note.textContent = (err && err.message) || "The on-device AI didn't finish.";
+  }).catch(function(){
+    /* Keep the standard sorting the person already sees; never show the raw GPU error. */
+    note.textContent = AI_STOPPED + " The standard sorting is shown instead; your text and slides are safe. Try again in a moment.";
   }).then(function(){ btn.disabled = false; });
 }
 
@@ -3508,7 +3554,7 @@ function aiTightenHeadlines(fromChat){
   }
   var btn = document.getElementById("btn-tighten");
   btn.disabled = true;
-  withEngine().then(function(engine){
+  Promise.resolve().then(function(){
     var changes = [], k = 0;
     function next(){
       if (k >= targets.length) return Promise.resolve();
@@ -3516,7 +3562,9 @@ function aiTightenHeadlines(fromChat){
       notify("Tightening headline " + k + " of " + targets.length + " on this device…");
       var support = s.support || [];
       var user = s.title + (support.length ? "\nSupporting points: " + support.join("; ") : "");
-      return ask(engine, TIGHTEN_SYSTEM, TIGHTEN_SHOTS, user, 40).then(function(out){
+      return askRobust(TIGHTEN_SYSTEM, TIGHTEN_SHOTS, user, 40, function(){
+        notify("Restarting the on-device AI\u2026");
+      }).then(function(out){
         var ok = acceptHeadline(s.title, support, out);
         if (ok) changes.push({ idx: idx, from: s.title, to: ok });
         return next();
@@ -3540,8 +3588,8 @@ function aiTightenHeadlines(fromChat){
         " on this device. They're marked ✦ — check them, edit them, or Undo.";
       if (fromChat) say("HandsOnDeck", done); else notify(done, "Undo", undo);
     });
-  }).catch(function(err){
-    var m = (err && err.message) || "The on-device AI didn't finish.";
+  }).catch(function(){
+    var m = AI_STOPPED + " Nothing was changed. Try again in a moment.";
     if (fromChat) say("HandsOnDeck", m, true); else notify(m);
   }).then(function(){ paintModeChip(); });
 }
