@@ -2996,6 +2996,10 @@ function deviceCheck(tier, m){
     }).catch(function(){ add("no", "The graphics processor couldn't be reached."); });
   }
   return chain.then(function(){
+    var conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    if (conn && (conn.type === "cellular" || conn.saveData)){
+      add("warn", "You seem to be on mobile data. This is a " + fmtMB(m.totalBytes) + " download \u2014 Wi-Fi is cheaper and more reliable. If the connection drops, it carries on where it stopped.");
+    }
     var minMem = tier === "pro" ? 8 : 4;
     if (navigator.deviceMemory && navigator.deviceMemory < minMem){
       add(tier === "pro" ? "no" : "warn", "This device reports under " + minMem + " GB of memory" +
@@ -3099,7 +3103,7 @@ function paintTier(tier){
     if (m) setOptStatus(tier, res.ok ? "Available \u00B7 " + fmtMB(m.totalBytes) + " download" : "Not available on this device", res.ok ? "ok" : "no");
     if (AI.busy) return;
     go.disabled = !res.ok;
-    go.textContent = res.ok ? "Download " + fmtMB(m.totalBytes) : "Not available here";
+    go.textContent = res.ok ? ((AI.partial && AI.partial[tier]) ? "Continue download" : "Download " + fmtMB(m.totalBytes)) : "Not available here";
   });
 }
 
@@ -3170,36 +3174,62 @@ function aiDownload(m, signal){
         return fetchOne();
       }).then(next);
 
+      /* One file: stream it, fingerprint it as it arrives, and only store it once it matches.
+         Mobile connections drop out, so a failed file is retried a few times (picking up
+         from scratch for that file only); files already checked are never fetched again. */
       function fetchOne(){
-        return ok.delete(url).then(function(){
-          return fetch(url, { cache: "no-store", signal: signal, mode: "cors", credentials: "omit" });
-        }).then(function(res){
-          if (!res.ok) throw new Error("Couldn't download " + (f.path || f.url) + " (" + res.status + ").");
-          var parts = res.body.tee();
-          var stored = cache.put(url, new Response(parts[0], { headers: {
-            "content-type": contentTypeFor(f.path || f.url) } }));
-          var hasher = new Sha256(), reader = parts[1].getReader(), got = 0;
-          function pump(){
-            return reader.read().then(function(r){
-              if (r.done) return;
-              hasher.update(r.value); got += r.value.length;
-              aiSetProgress((done + got) / total * (m.tier === "pro" ? 0.9 : 0.85),
-                "Downloading and checking — " + fmtMB(done + got) + " of " + fmtMB(total));
-              return pump();
-            });
-          }
-          return Promise.all([pump(), stored]).then(function(){
-            var h = hasher.hex();
-            if (h !== f.sha256){
-              return cache.delete(url).then(function(){
-                throw new Error("A downloaded file didn't match its fingerprint (" + (f.path || f.url.split("/").pop()) +
-                  "), so it was discarded and nothing was installed. Try again later.");
+        var attempt = 0, MAX = 4;
+        function tryOnce(){
+          attempt++;
+          var got = 0;
+          return ok.delete(url).then(function(){
+            return fetch(url, { cache: "no-store", signal: signal, mode: "cors", credentials: "omit" });
+          }).then(function(res){
+            if (!res.ok){ var he = new Error("http " + res.status); he.http = res.status; throw he; }
+            var reader = res.body.getReader(), hasher = new Sha256(), parts = [], pending = [], pendingBytes = 0;
+            function pump(){
+              return reader.read().then(function(r){
+                if (r.done) return;
+                hasher.update(r.value); got += r.value.length;
+                pending.push(r.value); pendingBytes += r.value.length;
+                /* Fold chunks into Blobs as we go, so the browser can keep large files on disk. */
+                if (pendingBytes > 16 * 1048576){ parts.push(new Blob(pending)); pending = []; pendingBytes = 0; }
+                aiSetProgress((done + got) / total * (m.tier === "pro" ? 0.9 : 0.85),
+                  "Downloading and checking \u2014 " + fmtMB(done + got) + " of " + fmtMB(total));
+                return pump();
               });
             }
-            done += f.size;
-            return ok.put(url, new Response(h));
+            return pump().then(function(){
+              if (pending.length) parts.push(new Blob(pending));
+              var h = hasher.hex();
+              if (h !== f.sha256){ var me = new Error("mismatch"); me.mismatch = true; throw me; }
+              return cache.put(url, new Response(new Blob(parts), { headers: {
+                "content-type": contentTypeFor(f.path || f.url) } })).then(function(){
+                done += f.size;
+                return ok.put(url, new Response(h));
+              });
+            });
+          }).catch(function(err){
+            if (err && err.name === "AbortError") throw err;
+            if (err && err.name === "QuotaExceededError"){
+              throw new Error("This device ran out of storage space during the download. Free some space, then tap Download to continue.");
+            }
+            var retryable = !(err && err.http === 404) && attempt < MAX && !(err && err.mismatch && attempt >= 2);
+            if (retryable){
+              aiSetProgress(done / total * (m.tier === "pro" ? 0.9 : 0.85),
+                "Connection dropped \u2014 retrying (" + (attempt + 1) + " of " + MAX + ")\u2026");
+              return new Promise(function(r){ setTimeout(r, 1500 * attempt); }).then(tryOnce);
+            }
+            if (err && err.mismatch){
+              throw new Error("A downloaded file didn't match its fingerprint, so it was thrown away and nothing was installed. Try again later.");
+            }
+            var e2 = new Error("The connection dropped while downloading. Everything already checked is kept \u2014 " +
+              "tap Continue download (ideally on Wi-Fi) to pick up where it stopped.");
+            e2.partial = true;
+            throw e2;
           });
-        });
+        }
+        return tryOnce();
       }
     }
     return next();
@@ -3357,6 +3387,8 @@ function aiInstall(tier){
   }).catch(function(err){
     AI.busy = null;
     var aborted = err && err.name === "AbortError";
+    AI.partial = AI.partial || {};
+    AI.partial[tier] = true;
     aiError(aborted ? "" : (err && err.message) || "Setup didn't finish.");
     aiSetProgress(0, aborted ? "Paused. Checked files are kept — Download picks up where it stopped."
                              : "Setup didn't finish. Standard mode still works.");
