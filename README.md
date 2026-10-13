@@ -334,8 +334,11 @@ it into a client and how to switch it off again.
 Stated plainly, because a prototype that claims to be finished is worse than one that
 knows what it is.
 
-- **No real language understanding.** The chat parses a fixed command set. Anything
-  outside it is rejected rather than guessed at.
+- **Limited language understanding.** In Standard, the chat understands a set of short
+  instructions (cut, move, delete, retitle, add a point, points per slide, style, the ask,
+  undo). In Supercharged, the on-device AI maps a request in your own words onto one of
+  those instructions and says how it read it; it can only pick an instruction, never write
+  slide text. Anything else gets a plain "here's what I can do" reply.
 - **No images, charts, tables or speaker notes.** Text slides only.
 - **No PowerPoint export.** Output is HTML, which prints to PDF. If a .pptx is a hard
   requirement for a user group, that is a build decision, not a formatting one.

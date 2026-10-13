@@ -995,6 +995,7 @@
         <button type="button">delete slide 4</button>
         <button type="button">make slide 3 say …</button>
         <button type="button">add to slide 2: …</button>
+        <button type="button">3 points per slide</button>
         <button type="button">style executive</button>
         <button type="button">make the ask explicit</button>
         <button type="button">undo</button>
@@ -1590,14 +1591,116 @@ function handleChat(raw){
   if (!text) return;
   say("You", text);
   if (!plan){ say("HandsOnDeck", "Generate a deck first.", true); return; }
-  const t = text.toLowerCase();
+  if (runCommand(text)) return;
+  if (aiReady()) aiInterpret(text);
+  else say("HandsOnDeck", notUnderstood(false));
+}
+
+function notUnderstood(aiTried){
+  return (aiTried ? "I couldn't match that to something I can do to the deck. " : "I didn't catch that. ") +
+    "I understand short instructions like the buttons below \u2014 for example \u201Ccut to 5 slides\u201D, " +
+    "\u201Cmove slide 4 to 2\u201D, \u201C3 points per slide\u201D or \u201Cmake slide 3 say \u2026\u201D." +
+    (aiReady() ? "" : " With Supercharged on, you can also ask in your own words.");
+}
+
+var NUM_WORDS = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8 };
+function numOf(w){ return /^\d+$/.test(w) ? parseInt(w, 10) : (NUM_WORDS[w] || 0); }
+
+/* "Each slide needs 3 points", "max 4 bullets per slide", "at least 2 points on every slide".
+   Points over the number are taken off (with Undo); points are never invented for slides
+   that have fewer \u2014 those are listed so the person can add their own. */
+function pointsPerSlide(t){
+  var N = "(\\d+|one|two|three|four|five|six|seven|eight)";
+  var m = t.match(new RegExp("\\b" + N + "\\s+(?:bullet\\s*)?(?:points?|bullets?|supporting points?)\\s+(?:per|on each|on every|for each|for every|in each|in every|each)\\b")) ||
+          t.match(new RegExp("\\b(?:each|every|all|per)\\b[^.]*?\\b" + N + "\\s+(?:bullet\\s*)?(?:points?|bullets?|supporting points?)\\b"));
+  if (!m) return false;
+  var n = numOf(m[1]);
+  if (n < 1 || n > 8){ say("HandsOnDeck", "Pick a number of points between 1 and 8.", true); return true; }
+  var mode = /\b(max(?:imum)?|at most|no more than|up to|not more than|limit)\b/.test(t) ? "max"
+    : /\b(at least|min(?:imum)?|no fewer than|no less than)\b/.test(t) ? "min" : "exact";
+  var pts = contentSlides(), over = [], under = [];
+  pts.forEach(function(i){
+    var k = (plan.slides[i].support || []).length;
+    if (k > n && mode !== "min") over.push(i);
+    if (k < n && mode !== "max") under.push(i);
+  });
+  if (!over.length && !under.length){
+    say("HandsOnDeck", "Every content slide already has " + (mode === "max" ? n + " or fewer" : mode === "min" ? n + " or more" : n) + " points.");
+    return true;
+  }
+  var parts = [], at = current;
+  if (over.length){
+    snapshot();
+    var cut = 0;
+    over.forEach(function(i){ cut += plan.slides[i].support.length - n; plan.slides[i].support = plan.slides[i].support.slice(0, n); });
+    at = over[0];
+    parts.push("Kept the first " + n + " points on slide" + (over.length === 1 ? " " : "s ") + listNums(over) +
+      " (" + cut + " point" + (cut === 1 ? "" : "s") + " taken off \u2014 Undo brings them back).");
+  }
+  if (under.length){
+    parts.push("Slide" + (under.length === 1 ? " " : "s ") + listNums(under) + (under.length === 1 ? " has" : " have") +
+      " fewer than " + n + ". I won't make points up \u2014 add your own with \u201Cadd to slide " + (under[0] + 1) +
+      ": \u2026\u201D, or under that message in the Brief.");
+    var inp = document.getElementById("chat-input");
+    inp.value = "add to slide " + (under[0] + 1) + ": ";
+  }
+  if (over.length) afterChatChange(parts.join(" "), at);
+  else { say("HandsOnDeck", parts.join(" ")); showSlide(under[0]); }
+  return true;
+}
+function listNums(idx){
+  var n = idx.map(function(i){ return String(i + 1); });
+  return n.length > 1 ? n.slice(0, -1).join(", ") + " and " + n[n.length - 1] : n[0];
+}
+
+/* Supercharged: the on-device AI reads a request in the person's own words and picks one of
+   the commands above. It can only choose a command, never write slide text, so nothing it
+   does can put words on a slide that the person didn't write. */
+var CHAT_SYSTEM = "You turn a request about a slide deck into one command. Reply with exactly one line from this list, " +
+  "filling in the numbers, or the word none:\n" +
+  "cut to N slides\nmove slide N to M\ndelete slide N\nN points per slide\nmax N points per slide\n" +
+  "style executive\nstyle operational\nstyle workshop\nmake the ask explicit\ntighten headlines\nundo\nnone";
+var CHAT_SHOTS = [
+  ["Can we make it shorter, like 5 slides?", "cut to 5 slides"],
+  ["Put the fourth slide second", "move slide 4 to 2"],
+  ["Get rid of slide 6", "delete slide 6"],
+  ["Every slide should have three bullets", "3 points per slide"],
+  ["Too much text, keep it to two bullets each", "max 2 points per slide"],
+  ["Make it look more formal for the bosses", "style executive"],
+  ["The headlines are too wordy", "tighten headlines"],
+  ["The last slide should say what we need from them", "make the ask explicit"],
+  ["Go back to how it was", "undo"],
+  ["What's the weather tomorrow?", "none"]
+];
+var CHAT_ALLOWED = /^(cut to \d+ slides?|move slide \d+ to \d+|delete slide \d+|(max )?\d+ points per slide|style (executive|operational|workshop)|make the ask explicit|tighten headlines|undo)$/;
+
+function aiInterpret(text){
+  var input = document.getElementById("chat-input"), send = document.getElementById("chat-send");
+  send.disabled = true;
+  say("HandsOnDeck", "Reading that on this device\u2026");
+  var pending = document.getElementById("chatlog").lastChild;
+  askRobust(CHAT_SYSTEM, CHAT_SHOTS, text, 12).then(function(out){
+    if (pending && pending.parentNode) pending.parentNode.removeChild(pending);
+    var cmd = String(out || "").toLowerCase().split("\n")[0].replace(/[\u201C\u201D".]/g, "").trim();
+    if (!CHAT_ALLOWED.test(cmd)){ say("HandsOnDeck", notUnderstood(true)); return; }
+    say("HandsOnDeck", "\u2726 I read that as \u201C" + cmd + "\u201D.");
+    if (!runCommand(cmd)) say("HandsOnDeck", notUnderstood(true));
+  }).catch(function(){
+    if (pending && pending.parentNode) pending.parentNode.removeChild(pending);
+    say("HandsOnDeck", aiStoppedMessage("Nothing was changed.") + " " + notUnderstood(false));
+  }).then(function(){ send.disabled = false; input.focus(); });
+}
+
+/* Runs one known command. Returns false if the text isn't one. */
+function runCommand(text){
+  const t = text.toLowerCase().replace(/[.!?]+$/, "").trim();
   let m;
 
   if (/^(undo|revert)\b/.test(t)){
-    if (!editHistory.length){ say("HandsOnDeck", "Nothing to undo.", true); return; }
+    if (!editHistory.length){ say("HandsOnDeck", "Nothing to undo.", true); return true; }
     undo();
     say("HandsOnDeck", "Undone. The deck, the plan and the brief are back to their previous state.");
-    return;
+    return true;
   }
 
   if ((m = t.match(/^(?:change )?style (?:to )?(operational|executive|workshop)/))){
@@ -1605,7 +1708,7 @@ function handleChat(raw){
     plan.meta.style = m[1];
     document.getElementById("f-style").value = m[1];
     afterChatChange("Style changed to " + m[1] + ". Type scale, spacing and density change with it, not just colour.");
-    return;
+    return true;
   }
 
   if ((m = t.match(/^(?:cut|reduce|trim)(?: it)?(?: down)? to (\d+) slides?/))){
@@ -1615,85 +1718,87 @@ function handleChat(raw){
     const keep = Math.max(1, want - fixed);
     if (keep >= pts.length){
       say("HandsOnDeck", "Already " + plan.slides.length + " slides — nothing to cut.", true);
-      return;
+      return true;
     }
     snapshot();
     const drop = pts.slice(keep);
     for (let i = drop.length - 1; i >= 0; i--) plan.slides.splice(drop[i], 1);
     afterChatChange("Cut to " + plan.slides.length + " slides by removing the last " + drop.length +
       " key message(s). They are gone from the brief too — undo if that is the wrong end to cut from.", 0);
-    return;
+    return true;
   }
 
   if ((m = t.match(/^move slide (\d+) (?:to|before) (?:position |slide )?(\d+)/)) ||
       (m = t.match(/^move slide (\d+) (up|down|earlier|later|forward|back)/))){
     const from = parseInt(m[1], 10) - 1;
     const to = /^\d+$/.test(m[2]) ? parseInt(m[2], 10) - 1 : from + (/up|earlier|forward/.test(m[2]) ? -1 : 1);
-    if (!plan.slides[from]){ say("HandsOnDeck", "There is no slide " + (from + 1) + ".", true); return; }
-    if (from === 0){ say("HandsOnDeck", "The cover stays first. Move another slide instead.", true); return; }
-    if (!moveSlide(from, to)){ say("HandsOnDeck", "That slide is already there.", true); return; }
+    if (!plan.slides[from]){ say("HandsOnDeck", "There is no slide " + (from + 1) + ".", true); return true; }
+    if (from === 0){ say("HandsOnDeck", "The cover stays first. Move another slide instead.", true); return true; }
+    if (!moveSlide(from, to)){ say("HandsOnDeck", "That slide is already there.", true); return true; }
     say("HandsOnDeck", "Moved it to slide " + (current + 1) + ". The brief follows the new order.");
-    return;
+    return true;
   }
 
   if ((m = t.match(/^(?:delete|remove|drop) slide (\d+)/))){
     const n = parseInt(m[1], 10) - 1;
-    if (!plan.slides[n]){ say("HandsOnDeck", "There is no slide " + (n+1) + ".", true); return; }
-    if (plan.slides[n].type === "title"){ say("HandsOnDeck", "The title slide cannot be deleted.", true); return; }
+    if (!plan.slides[n]){ say("HandsOnDeck", "There is no slide " + (n+1) + ".", true); return true; }
+    if (plan.slides[n].type === "title"){ say("HandsOnDeck", "The title slide cannot be deleted.", true); return true; }
     snapshot();
     plan.slides.splice(n, 1);
     afterChatChange("Deleted slide " + (n+1) + ".", Math.min(n, plan.slides.length - 1));
-    return;
+    return true;
   }
 
-  if ((m = text.match(/^(?:make|retitle|change) slide (\d+) (?:say|to say|to read|about) (.+)$/i))){
+  if ((m = text.match(/^(?:make|retitle|change|rename) slide (\d+)(?:'s)?(?: headline| title)? (?:say|to say|to read|read|about|to|as) (.+)$/i))){
     const n = parseInt(m[1], 10) - 1;
-    if (!plan.slides[n]){ say("HandsOnDeck", "There is no slide " + (n+1) + ".", true); return; }
+    if (!plan.slides[n]){ say("HandsOnDeck", "There is no slide " + (n+1) + ".", true); return true; }
     snapshot();
     plan.slides[n].title = m[2].trim();
     afterChatChange("Slide " + (n+1) + " headline updated. The wording came from you, so the content check still holds.", n);
-    return;
+    return true;
   }
 
   if ((m = text.match(/^add (?:to )?slide (\d+)\s*:\s*(.+)$/i))){
     const n = parseInt(m[1], 10) - 1;
     if (!plan.slides[n] || plan.slides[n].type === "title"){
-      say("HandsOnDeck", "Cannot add a supporting point to slide " + (n+1) + ".", true); return;
+      say("HandsOnDeck", "Cannot add a supporting point to slide " + (n+1) + ".", true); return true;
     }
     snapshot();
     plan.slides[n].support = plan.slides[n].support || [];
     plan.slides[n].support.push(m[2].trim());
     afterChatChange("Added a supporting point to slide " + (n+1) + ".", n);
-    return;
+    return true;
   }
 
   if (/^make the ask explicit/.test(t)){
     const last = plan.slides[plan.slides.length - 1];
-    if (last.type !== "close"){ say("HandsOnDeck", "No closing slide to work with.", true); return; }
+    if (last.type !== "close"){ say("HandsOnDeck", "No closing slide to work with.", true); return true; }
     const purpose = document.getElementById("f-purpose").value.trim();
-    if (!purpose){ say("HandsOnDeck", "Add a purpose to the brief and I will put it on the closing slide.", true); return; }
+    if (!purpose){ say("HandsOnDeck", "Add a purpose to the brief and I will put it on the closing slide.", true); return true; }
     snapshot();
     last.support = [purpose];
     afterChatChange("The closing slide now states the ask, taken from your purpose. I will not write an ask you have not written yourself.",
       plan.slides.length - 1);
-    return;
+    return true;
   }
 
   if (/^(tighten|shorten)( the)? headlines?/.test(t)){
     if (!aiReady()){
       say("HandsOnDeck", "Tightening headlines needs Supercharged mode — set it up from the ✦ button in the top bar.", true);
-      return;
+      return true;
     }
     aiTightenHeadlines(true);
-    return;
+    return true;
   }
+
+  if (pointsPerSlide(t)) return true;
 
   if (/^(help|what can you do)/.test(t)){
-    say("HandsOnDeck", "I can cut the deck to a length, move or delete a slide, change a headline, add a supporting point, change style, make the ask explicit, or undo. Everything I do writes to the slide plan and back into your brief.");
-    return;
+    say("HandsOnDeck", "I can cut the deck to a length, move or delete a slide, change a headline, add a supporting point, set the number of points per slide, change style, make the ask explicit, or undo." + (aiReady() ? " In Supercharged you can also ask in your own words." : "") + " Everything I do writes to the slide plan and back into your brief.");
+    return true;
   }
 
-  say("HandsOnDeck", "I did not recognise that. This surface parses a fixed command set rather than free language — in the agentic version a model would sit here and translate intent into the same plan operations.", true);
+  return false;
 }
 
 function snapshot(){
