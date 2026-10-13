@@ -244,7 +244,12 @@ works on a plane. It is that nothing leaves the browser.
    and the version is stamped on the title slide, in the document title and in the
    filename.
 6. **Send for editing** — saves a copy that carries its own editor and its own slide plan.
-7. **Open a deck** — brings a version someone sent back into the app, structure intact.
+7. **Open a deck (.html)** — brings a deck back into the app: a version someone sent back, a
+   deck you downloaded earlier (downloads carry their slide plan), or another tool's HTML deck
+   built from `<section class="slide">` (text only; nothing in the file runs). You can also drop
+   the file onto the page.
+8. **Pick up where you left off** — work is saved as you go in this browser (localStorage), and
+   the start screen lists recent decks to continue or remove. Nothing is sent anywhere.
 
 Three styles change type scale, spacing and density, not just colour: operational
 (dense, evidence-forward), executive (spare, one idea per slide), workshop
@@ -334,8 +339,9 @@ knows what it is.
 - **No images, charts, tables or speaker notes.** Text slides only.
 - **No PowerPoint export.** Output is HTML, which prints to PDF. If a .pptx is a hard
   requirement for a user group, that is a build decision, not a formatting one.
-- **No persistence beyond the file.** Nothing is stored. Close the tab and the deck is
-  gone unless it was downloaded or sent for editing. Round-tripping works, but there is
+- **Saved only in this browser.** Recent decks are kept in this browser on this device
+  (up to eight); clearing site data removes them, and they don't follow you to another
+  device — download or send the file for that. Round-tripping works, but there is
   no history of who changed what, and two people editing at once will produce two
   versions with no way to merge them.
 - **No accessibility audit.** Keyboard navigation and focus states exist; a contrast and

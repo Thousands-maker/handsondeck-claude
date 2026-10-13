@@ -104,6 +104,23 @@
     background:var(--paper); border:1px dashed var(--rule-strong); border-radius:var(--radius); font-size:14px; color:var(--ink-2)}
   .moderow .mr-text{flex:1 1 220px}
   .moderow b{color:var(--primary)}
+  .recent{margin:0 0 26px; padding:16px 18px 14px; background:var(--paper); border:1px solid var(--rule);
+    border-radius:var(--radius); box-shadow:var(--shadow)}
+  .recent h2{font-size:15px; margin:0 0 10px; font-weight:650}
+  .recent ul{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px}
+  .recent li{display:flex; align-items:center; gap:10px; border:1px solid var(--rule); border-radius:var(--radius-sm);
+    padding:10px 12px; background:var(--surface-2)}
+  .recent li.first{border-color:var(--primary); background:var(--primary-soft)}
+  .recent .rd-text{flex:1 1 auto; min-width:0}
+  .recent .rd-title{display:block; font-weight:600; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .recent .rd-meta{display:block; font-size:13px; color:var(--muted)}
+  .recent .rd-go{flex:0 0 auto; white-space:nowrap}
+  .recent .rd-del{flex:0 0 auto; font-size:13px; padding:6px 10px}
+  .recent .rd-more{margin-top:10px}
+  .recent .rd-note{margin:10px 0 0; font-size:12.5px; color:var(--muted)}
+  body.dropping::after{content:"Drop a HandsOnDeck .html deck to open it"; position:fixed; inset:12px; z-index:90;
+    display:flex; align-items:center; justify-content:center; border:3px dashed var(--primary); border-radius:16px;
+    background:rgba(255,255,255,.88); color:var(--primary); font-size:20px; font-weight:650; pointer-events:none}
   .buildstamp{margin:28px 0 0; font-size:12px; color:var(--muted)}
   .buildstamp:empty{display:none}
   .how{margin-top:28px; display:grid; grid-template-columns:repeat(3,1fr); gap:16px;
@@ -501,6 +518,8 @@
     .welcome h1{font-size:30px}
     .welcome .lede{font-size:16px}
     .paths, .how{grid-template-columns:1fr}
+    .recent li{flex-wrap:wrap}
+    .recent .rd-text{flex-basis:100%}
     .alt span{display:none}
     .guide{padding:22px 16px 48px}
     .step{padding:22px 18px}
@@ -551,6 +570,13 @@
     </div>
   </div>
 
+  <section class="recent" id="recent" hidden aria-labelledby="recent-h">
+    <h2 id="recent-h">Pick up where you left off</h2>
+    <ul id="recent-list"></ul>
+    <button type="button" class="linkbtn rd-more" id="recent-more" hidden></button>
+    <p class="rd-note">Saved automatically in this browser on this device, as you work.</p>
+  </section>
+
   <div class="paths">
     <button type="button" class="card recommended" id="path-brief">
       <span class="tag">You know your argument</span>
@@ -569,7 +595,7 @@
   </div>
 
   <div class="alt">
-    <label class="filebtn" for="f-open" tabindex="0" role="button">Open a deck someone sent back</label>
+    <label class="filebtn" for="f-open" tabindex="0" role="button">Open a deck (.html)</label>
     <span>or</span>
     <button type="button" class="linkbtn" id="btn-try-example">see a finished example first</button>
   </div>
@@ -892,7 +918,7 @@
 
     <div class="actions">
       <button id="btn-generate" class="primary-action big">Generate deck</button>
-      <label class="filebtn" for="f-open" tabindex="0" role="button">Open a deck</label>
+      <label class="filebtn" for="f-open" tabindex="0" role="button">Open a deck (.html)</label>
     </div>
 
   </section>
@@ -1305,6 +1331,7 @@ function renderStrip(){
 }
 
 function renderDeck(startAt){
+  scheduleSave();
   applyStageStyle(plan.meta.style);
   document.getElementById("stage").innerHTML = slideMarkup(plan, true);
   renderStrip();
@@ -1360,7 +1387,10 @@ function standaloneDoc(p){
     "<title>" + esc(p.meta.title || "Briefing") +
     (p.meta.version ? " v" + p.meta.version : "") + "</title><style>" + css +
     "</style></head><body>" + slideMarkup(p, false) +
-    "<div class='nav' id='nav'></div><scr" + "ipt>" + js + "</scr" + "ipt></body></html>";
+    "<div class='nav' id='nav'></div>" +
+    "<scr" + "ipt type='application/json' id='plan'>" +
+    JSON.stringify(p).replace(/</g, "\\u003c") + "</scr" + "ipt>" +
+    "<scr" + "ipt>" + js + "</scr" + "ipt></body></html>";
 }
 
 function syncFormFromPlan(){
@@ -2048,19 +2078,71 @@ function loadPlanObject(incoming, label){
   refreshContentCheck();
   clearEdited();
   document.getElementById("timing").textContent =
-    "v" + version + " · opened from a file";
+    "v" + version + (label ? " · opened from a file" : " · back where you left off");
   document.getElementById("btn-generate").textContent = "Update deck";
   paintModeChip();
   showScreen("work");
   selectTab("deck");
   showWorkView("deck");
-  document.getElementById("version-note").textContent =
-    "Opened " + label + ". The brief has been filled in from their version, so you can " +
-    "keep working on it here.";
+  document.getElementById("version-note").textContent = label
+    ? "Opened " + label + ". The brief has been filled in from their version, so you can " +
+      "keep working on it here."
+    : "";
+}
+
+/* Rebuild a slide plan from a deck's HTML when it carries none: decks downloaded before
+   downloads carried their plan, and decks from other tools that use <section class="slide">.
+   Only text is taken; nothing in the file runs. */
+function planFromSlidesHtml(doc){
+  var nodes = doc.querySelectorAll("section.slide, .slide");
+  if (!nodes.length) nodes = doc.querySelectorAll("body > section, main > section");
+  if (!nodes.length) return null;
+  var txt = function(el){ return el ? String(el.textContent || "").replace(/\s+/g, " ").trim() : ""; };
+  var slides = [], logo = null, ver = 0;
+  for (var i = 0; i < nodes.length; i++){
+    var n = nodes[i];
+    var h = n.querySelector("h1, h2, h3, h4");
+    var title = txt(h);
+    var vt = n.querySelector(".vtag");
+    if (vt){ var mv = /(\d+)/.exec(txt(vt)); if (mv) ver = parseInt(mv[1], 10); }
+    var img = n.querySelector("img.logo, img.slide-logo");
+    if (!logo && img && LOGO_RE.test(img.getAttribute("src") || "")) logo = { mode: "image", src: img.getAttribute("src") };
+    var support = [];
+    var items = n.querySelectorAll("li, p");
+    for (var j = 0; j < items.length; j++){
+      var it = items[j];
+      if (/(^|\s)(vtag|pgno|number|eyebrow|sub|logo|nav)(\s|$)/.test(it.className || "")) continue;
+      if (it.tagName === "P" && it.closest("li")) continue;
+      var t = txt(it);
+      if (t && t !== title) support.push(t);
+    }
+    if (i === 0){
+      var sub = n.querySelector(".sub");
+      slides.push({ type: "title", title: title, subtitle: sub ? txt(sub) : (support[0] || "") });
+    } else if (i === nodes.length - 1 && /(^|\s)close(\s|$)/.test(n.className || "")){
+      slides.push({ type: "close", title: title || "The ask", support: support });
+    } else if (/(^|\s)context(\s|$)/.test(n.className || "")){
+      slides.push({ type: "context", title: title || "Why we are here", support: support.slice(0, 1) });
+    } else if (title || support.length){
+      slides.push({ type: "point", title: title || support.shift(), support: support });
+    }
+  }
+  if (!slides.length || (slides.length === 1 && !slides[0].title)) return null;
+  var hod = /(^|\s)(title|point|context|close)(\s|$)/.test(nodes[0].className || "");
+  return {
+    meta: { title: slides[0].title, style: "operational", version: ver || 1,
+      logo: logo || { mode: "placeholder", src: "" },
+      importedFrom: hod ? "an older HandsOnDeck download" : "another tool's HTML deck" },
+    slides: slides, warnings: []
+  };
 }
 
 function openDeckFile(file){
   if (!file) return;
+  if (!/\.(html?|json)$/i.test(file.name || "")){
+    notify("That isn't a deck file. Open a .html deck (or a .json slide plan).");
+    return;
+  }
   var reader = new FileReader();
   reader.onerror = function(){ notify("That file could not be read."); };
   reader.onload = function(){
@@ -2074,16 +2156,27 @@ function openDeckFile(file){
         var doc = new DOMParser().parseFromString(text, "text/html");
         var node = doc.getElementById("plan");
         if (node) incoming = JSON.parse(node.textContent);
+        else incoming = planFromSlidesHtml(doc);
       }
     } catch (err){
       notify("That file could not be read as a deck.");
       return;
     }
     if (!incoming){
-      notify("No slide plan found in that file. Open a deck saved by HandsOnDeck.");
+      notify("No slides found in that file. Open a deck downloaded or sent from HandsOnDeck.");
       return;
     }
+    if (!incoming.slides || !incoming.slides.length){
+      notify("That file does not contain a slide plan.");
+      return;
+    }
+    startNewDeck();                       /* the deck you were on stays under Pick up where you left off */
     loadPlanObject(incoming, file.name);
+    if (incoming.meta && incoming.meta.importedFrom){
+      document.getElementById("version-note").textContent = "Opened " + file.name + " from " +
+        incoming.meta.importedFrom + ". The slide text was read back into the brief; check the " +
+        "headlines and points, then keep working.";
+    }
   };
   reader.readAsText(file);
 }
@@ -2225,7 +2318,9 @@ var screen = "welcome";
 function showScreen(name){
   /* The guided answers and the brief are one draft: leaving the guided path writes it back. */
   if (screen === "guide" && name !== "guide") briefFromGuided();
+  if ((screen === "guide" || screen === "work") && name !== screen) saveNow();
   screen = name;
+  if (name === "welcome") paintRecent();
   ["welcome", "guide", "work", "ai"].forEach(function(k){
     document.getElementById("screen-" + k).hidden = (k !== name);
     var c = document.getElementById("crumb-" + k);
@@ -2388,15 +2483,16 @@ function guidedMessages(){
   return lines.join("\n");
 }
 
-function briefFromGuided(){
-  writeForm({
+function guidedForm(){
+  return {
     "f-title": document.getElementById("g-title").value.trim(),
     "f-purpose": document.getElementById("g-purpose").value.trim(),
     "f-audience": document.getElementById("g-audience").value.trim(),
     "f-messages": guidedMessages(),
     "f-style": guidedStyle()
-  });
+  };
 }
+function briefFromGuided(){ writeForm(guidedForm()); }
 
 function addReviewRow(dl, label, value, gotoStep){
   var row = document.createElement("div"); row.className = "row";
@@ -3273,11 +3369,19 @@ function startEngine(tier, onProgress){
   return AI.loading[tier];
 }
 
+/* Phones have little graphics memory, and the model's default working memory (a 4,096-token
+   context, processed 2,048 tokens at a time) is enough to make some phones reset the chip.
+   Every prompt here is a few hundred tokens, so phones, and any device that has reset once,
+   run with a much smaller working memory. Answers are the same. */
+var ON_PHONE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
+var LIGHT_OPTS = { context_window_size: 1024, prefill_chunk_size: 256 };
+var LS_GPUFAIL = "hod.ai.gpufail";
+
 function startWebLLM(mod, m, onProgress){
   return mod.CreateMLCEngine(m.model.id, {
     appConfig: appConfigFor(m),
     initProgressCallback: function(r){ if (onProgress) onProgress(r.progress || 0); }
-  }).then(function(engine){
+  }, (ON_PHONE || AI.light) ? LIGHT_OPTS : undefined).then(function(engine){
     return {
       raw: engine,
       unload: function(){ if (engine.unload) engine.unload(); },
@@ -3455,10 +3559,24 @@ function resetEngine(){
 function askRobust(system, shots, user, maxTokens, onRestart){
   return withEngine().then(function(engine){ return ask(engine, system, shots, user, maxTokens); })
     .catch(function(){
+      AI.light = true;                 /* restart with the smaller working memory */
       resetEngine();
       if (onRestart) onRestart();
       return withEngine().then(function(engine){ return ask(engine, system, shots, user, maxTokens); });
-    });
+    })
+    .then(function(out){ lsSet(LS_GPUFAIL, null); return out; });
+}
+/* Called when the AI could not finish even after a restart. After the second time on this
+   device, say plainly that it doesn't run reliably here rather than "try again" forever. */
+function aiStoppedMessage(tail){
+  var n = (parseInt(lsGet(LS_GPUFAIL) || "0", 10) || 0) + 1;
+  lsSet(LS_GPUFAIL, String(n));
+  if (n >= 2){
+    return "On-device AI keeps stopping on this " + (ON_PHONE ? "phone" : "device") +
+      " \u2014 its graphics chip runs out of room for the model. " + tail +
+      " Standard mode does the same job without AI; Supercharged runs more reliably on a laptop.";
+  }
+  return AI_STOPPED + " " + tail + " Try again in a moment.";
 }
 var AI_STOPPED = "The on-device AI stopped \u2014 this device's graphics chip reset, which phones sometimes do " +
   "after switching apps.";
@@ -3514,7 +3632,7 @@ function aiSortFreeText(){
     });
   }).catch(function(){
     /* Keep the standard sorting the person already sees; never show the raw GPU error. */
-    note.textContent = AI_STOPPED + " The standard sorting is shown instead; your text and slides are safe. Try again in a moment.";
+    note.textContent = aiStoppedMessage("The standard sorting is shown instead; your text and slides are safe.");
   }).then(function(){ btn.disabled = false; });
 }
 
@@ -3589,7 +3707,7 @@ function aiTightenHeadlines(fromChat){
       if (fromChat) say("HandsOnDeck", done); else notify(done, "Undo", undo);
     });
   }).catch(function(){
-    var m = AI_STOPPED + " Nothing was changed. Try again in a moment.";
+    var m = aiStoppedMessage("Nothing was changed.");
     if (fromChat) say("HandsOnDeck", m, true); else notify(m);
   }).then(function(){ paintModeChip(); });
 }
@@ -3660,12 +3778,18 @@ document.getElementById("ms-brief").addEventListener("click", function(){ showWo
 document.getElementById("ms-deck").addEventListener("click", function(){ showWorkView("deck"); window.scrollTo(0, 0); });
 
 /* ---------- start screen and navigation ---------- */
-document.getElementById("path-guide").addEventListener("click", startGuide);
+document.getElementById("path-guide").addEventListener("click", function(){
+  startNewDeck(true);
+  startGuide();
+});
 document.getElementById("path-brief").addEventListener("click", function(){
+  startNewDeck(true);
   showScreen("work");
   document.getElementById("f-title").focus();
 });
 document.getElementById("btn-try-example").addEventListener("click", function(){
+  startNewDeck(true);
+  exampleUntouched = true;
   writeForm({ "f-title": SAMPLE.title, "f-purpose": SAMPLE.purpose, "f-audience": SAMPLE.audience,
               "f-messages": SAMPLE.messages, "f-style": SAMPLE.style });
   showScreen("work");
@@ -3707,9 +3831,248 @@ for (var fb = 0; fb < fileBtns.length; fb++){
   });
 }
 
+/* ---------- your decks on this device ----------
+   Work is saved as you go, in this browser only (localStorage), so closing the tab or
+   losing the connection never loses a deck. The start screen lists recent decks to pick
+   up again. Nothing is sent anywhere. */
+var LS_DECKS = "hod.decks", MAX_DECKS = 8, SHOW_DECKS = 3;
+var deckId = null, saveTimer = null, restoring = false, exampleUntouched = false, recentAll = false;
+
+function newDeckId(){ return "d" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+function loadDecks(){
+  try {
+    var a = JSON.parse(lsGet(LS_DECKS) || "[]");
+    return Array.isArray(a) ? a.filter(function(d){ return d && d.id && d.form; }) : [];
+  } catch (e){ return []; }
+}
+function storeDecks(list){
+  list = list.slice(0, MAX_DECKS);
+  for (;;){
+    try { window.localStorage.setItem(LS_DECKS, JSON.stringify(list)); return true; }
+    catch (e){
+      if (!list.length) return false;
+      if (list.length > 1){ list = list.slice(0, -1); continue; }   /* make room: drop the oldest */
+      /* One deck still too big: keep it without its logo image rather than not at all. */
+      var d = list[0];
+      if (d.logo && d.logo.mode === "image"){
+        d.logo = { mode: "placeholder", src: "" };
+        if (d.plan && d.plan.meta) d.plan.meta.logo = { mode: "placeholder", src: "" };
+        continue;
+      }
+      return false;
+    }
+  }
+}
+
+function deckTitle(d){
+  var t = (d.form && d.form["f-title"]) || (d.plan && d.plan.meta && d.plan.meta.title) || "";
+  if (String(t).trim()) return String(t).trim();
+  var m = String((d.form && d.form["f-messages"]) || d.freetext || "").trim().split("\n")[0];
+  return m ? "Untitled — “" + (m.length > 48 ? m.slice(0, 48) + "…" : m) + "”" : "Untitled deck";
+}
+function timeAgo(t){
+  var s = Math.max(0, (Date.now() - t) / 1000);
+  if (s < 60) return "just now";
+  if (s < 3600) return Math.round(s / 60) + " min ago";
+  if (s < 86400) return Math.round(s / 3600) + " h ago";
+  if (s < 172800) return "yesterday";
+  return new Date(t).toLocaleDateString(undefined, { day: "numeric", month: "short" });
+}
+
+function currentDraft(){
+  var form = screen === "guide" ? guidedForm() : readForm();
+  var freetext = document.getElementById("g-freetext").value;
+  var has = plan || freetext.trim() || ["f-title", "f-purpose", "f-audience", "f-messages"].some(function(k){
+    return String(form[k] || "").trim();
+  });
+  if (!has) return null;
+  return { id: deckId, savedAt: Date.now(), screen: (!plan && screen === "guide") ? "guide" : "work",
+    form: form, freetext: freetext, plan: plan, version: version, edited: slideEdited,
+    logo: { mode: logoState.mode, src: logoState.src || "" } };
+}
+
+function saveNow(){
+  if (saveTimer){ window.clearTimeout(saveTimer); saveTimer = null; }
+  if (restoring || exampleUntouched) return;
+  var d = currentDraft();
+  if (!d) return;
+  if (!deckId) deckId = newDeckId();
+  d.id = deckId;
+  var list = loadDecks().filter(function(x){ return x.id !== deckId; });
+  list.unshift(d);
+  storeDecks(list);
+}
+function scheduleSave(){
+  if (restoring) return;
+  if (saveTimer) window.clearTimeout(saveTimer);
+  saveTimer = window.setTimeout(saveNow, 600);
+}
+
+document.addEventListener("input", function(){
+  if (screen !== "guide" && screen !== "work") return;
+  exampleUntouched = false;
+  scheduleSave();
+}, true);
+document.addEventListener("change", function(){
+  if (screen === "guide" || screen === "work") scheduleSave();
+}, true);
+window.addEventListener("pagehide", saveNow);
+document.addEventListener("visibilitychange", function(){ if (document.visibilityState === "hidden") saveNow(); });
+
+/* Clear the workspace for a new deck. The deck being left is saved first, so it stays
+   in the list on the start screen. With onlyIfBusy, an empty workspace is left as it is. */
+function startNewDeck(onlyIfBusy){
+  var busy = !!plan || briefHasContent() || !!document.getElementById("g-freetext").value.trim();
+  if (onlyIfBusy && !busy) return;
+  var leaving = deckId;
+  saveNow();
+  plan = null; current = 0; version = 0; editHistory = []; deckId = null; exampleUntouched = false;
+  document.getElementById("btn-undo").disabled = true;
+  writeForm({ "f-title": "", "f-purpose": "", "f-audience": "", "f-messages": "", "f-style": "operational" });
+  document.getElementById("g-freetext").value = "";
+  autoAsk = "";
+  blankBeats();
+  renderBeats();
+  document.getElementById("g-stale").hidden = true;
+  document.getElementById("deck-empty").hidden = false;
+  document.getElementById("deck-live").hidden = true;
+  document.getElementById("btn-download").disabled = true;
+  document.getElementById("btn-share").disabled = true;
+  document.getElementById("btn-generate").textContent = "Generate deck";
+  document.getElementById("version-note").textContent = "";
+  document.getElementById("timing").textContent = "";
+  document.getElementById("planout").textContent = "No plan yet.";
+  clearEdited();
+  paintAdvice();
+  if (busy && leaving){
+    var back = loadDecks().filter(function(x){ return x.id === leaving; })[0];
+    if (back) notify("New deck started. “" + deckTitle(back) + "” is saved on the start screen.",
+      "Go back to it", function(){ resumeDeck(back.id); });
+  }
+}
+
+function resumeDeck(id){
+  if (deckId === id){                         /* already open here: just go back to it */
+    saveNow();
+    if (plan){ showScreen("work"); selectTab("deck"); showWorkView("deck"); }
+    else if (screen !== "guide" && (loadDecks().filter(function(x){ return x.id === id; })[0] || {}).screen === "guide") startGuide();
+    else showScreen("work");
+    return;
+  }
+  var d = loadDecks().filter(function(x){ return x.id === id; })[0];
+  if (!d){ notify("That deck is no longer saved in this browser."); paintRecent(); return; }
+  startNewDeck(true);
+  restoring = true;
+  try {
+    deckId = d.id;
+    var lg = d.logo || {};
+    logoState = (lg.mode === "none" || (lg.mode === "image" && LOGO_RE.test(lg.src || "")))
+      ? { mode: lg.mode, src: lg.src || "" } : { mode: "placeholder", src: "" };
+    paintLogoControls();
+    writeForm(d.form);
+    document.getElementById("g-freetext").value = d.freetext || "";
+    if (d.plan && d.plan.slides && d.plan.slides.length){
+      loadPlanObject(d.plan, null);
+      editHistory = [];
+      document.getElementById("btn-undo").disabled = true;
+      version = d.version || version;
+      writeForm(d.form);                     /* brief edits not yet turned into slides */
+      if (d.edited) markEdited();
+    } else if (d.screen === "guide"){
+      startGuide();
+    } else {
+      showScreen("work");
+      showWorkView("brief");
+    }
+  } finally {
+    restoring = false;
+  }
+  saveNow();
+  notify("Back to “" + deckTitle(d) + "”. Edited " + timeAgo(d.savedAt) + ".");
+}
+
+function removeDeck(id){
+  var list = loadDecks();
+  var gone = list.filter(function(x){ return x.id === id; })[0];
+  if (!gone) return;
+  storeDecks(list.filter(function(x){ return x.id !== id; }));
+  if (deckId === id) deckId = null;          /* keep the workspace; it saves as a new entry if edited */
+  paintRecent();
+  notify("Removed “" + deckTitle(gone) + "” from this browser.", "Undo", function(){
+    var now = loadDecks().filter(function(x){ return x.id !== id; });
+    now.push(gone);
+    now.sort(function(a, b){ return b.savedAt - a.savedAt; });
+    storeDecks(now);
+    paintRecent();
+  });
+}
+
+function paintRecent(){
+  var box = document.getElementById("recent"), ul = document.getElementById("recent-list");
+  var list = loadDecks();
+  box.hidden = !list.length;
+  ul.innerHTML = "";
+  var shown = recentAll ? list : list.slice(0, SHOW_DECKS);
+  shown.forEach(function(d, i){
+    var li = document.createElement("li");
+    if (i === 0) li.className = "first";
+    var text = document.createElement("span"); text.className = "rd-text";
+    var t = document.createElement("span"); t.className = "rd-title"; t.textContent = deckTitle(d);
+    var m = document.createElement("span"); m.className = "rd-meta";
+    var n = d.plan && d.plan.slides ? d.plan.slides.length : 0;
+    m.textContent = (n ? n + " slides" + (d.version ? " · v" + d.version : "")
+      : (d.screen === "guide" ? "Guided, in progress" : "Brief, no slides yet")) + " · edited " + timeAgo(d.savedAt);
+    text.appendChild(t); text.appendChild(m);
+    var go = document.createElement("button");
+    go.type = "button"; go.className = "rd-go" + (i === 0 ? "" : " secondary");
+    go.textContent = (d.id === deckId && plan) ? "Back to it →" : "Continue →";
+    go.setAttribute("aria-label", "Continue " + deckTitle(d));
+    go.addEventListener("click", function(){ resumeDeck(d.id); });
+    var del = document.createElement("button");
+    del.type = "button"; del.className = "ghost rd-del"; del.textContent = "Remove";
+    del.setAttribute("aria-label", "Remove " + deckTitle(d) + " from this browser");
+    del.addEventListener("click", function(){ removeDeck(d.id); });
+    li.appendChild(text); li.appendChild(go); li.appendChild(del);
+    ul.appendChild(li);
+  });
+  var more = document.getElementById("recent-more");
+  more.hidden = list.length <= SHOW_DECKS;
+  more.textContent = recentAll ? "Show fewer" : "Show all " + list.length + " decks";
+}
+document.getElementById("recent-more").addEventListener("click", function(){ recentAll = !recentAll; paintRecent(); });
+
+/* Drop a deck file anywhere on the start screen or workspace to open it. */
+var dropDepth = 0;
+function dragHasFile(e){
+  var t = e.dataTransfer && e.dataTransfer.types;
+  return !!t && Array.prototype.indexOf.call(t, "Files") !== -1;
+}
+document.addEventListener("dragenter", function(e){
+  if (!dragHasFile(e) || (screen !== "welcome" && screen !== "work")) return;
+  dropDepth += 1; document.body.classList.add("dropping");
+});
+document.addEventListener("dragleave", function(e){
+  if (!dragHasFile(e)) return;
+  dropDepth = Math.max(0, dropDepth - 1);
+  if (!dropDepth) document.body.classList.remove("dropping");
+});
+document.addEventListener("dragover", function(e){
+  if (dragHasFile(e) && (screen === "welcome" || screen === "work")) e.preventDefault();
+});
+document.addEventListener("drop", function(e){
+  if (!dragHasFile(e)) return;
+  dropDepth = 0; document.body.classList.remove("dropping");
+  if (screen !== "welcome" && screen !== "work") return;
+  if (e.target && e.target.closest && e.target.closest("#logo-menu, .logoctl")) return;
+  e.preventDefault();
+  var f = e.dataTransfer.files && e.dataTransfer.files[0];
+  if (f) openDeckFile(f);
+});
+
 blankBeats();
 renderBeats();
 updateCounter();
+paintRecent();
 })();
 </script>
 </body>
