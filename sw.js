@@ -9,7 +9,7 @@
  * the cache in the background when a network happens to be available.
  */
 
-var VERSION = "handsondeck-v7";
+var VERSION = "handsondeck-v8";
 var SHELL = [
   "./",
   "./index.html",
@@ -24,13 +24,57 @@ var SHELL = [
    as well as files on this site. */
 var AI_CACHE = "handsondeck-ai";
 var AI_OK = "handsondeck-ai-ok";
+/* Large files are stored in pieces (see the page's aiDownload); their AI_OK record reads
+   "<sha256>|parts|<count>|<url>", and they are served here joined back into one file. */
+var AI_PARTS = "handsondeck-ai-parts";
+
+function partUrl(url, k) { return url + (url.indexOf("?") === -1 ? "?" : "&") + "hodpart=" + k; }
+
+function contentTypeOf(url) {
+  if (/\.json(\?|$)/.test(url)) return "application/json";
+  if (/\.wasm(\?|$)/.test(url)) return "application/wasm";
+  if (/\.m?js(\?|$)/.test(url)) return "text/javascript";
+  return "application/octet-stream";
+}
+
+function joinedParts(base, n) {
+  return caches.open(AI_PARTS).then(function (pc) {
+    var ms = [];
+    for (var k = 0; k < n; k++) ms.push(pc.match(partUrl(base, k)));
+    return Promise.all(ms);
+  }).then(function (rs) {
+    if (!rs.length || rs.some(function (r) { return !r; })) return null;
+    var total = rs.reduce(function (s, r) { return s + (parseInt(r.headers.get("x-bytes"), 10) || 0); }, 0);
+    var i = 0, reader = null;
+    var body = new ReadableStream({
+      pull: function (ctrl) {
+        function step() {
+          if (!reader) {
+            if (i >= rs.length) { ctrl.close(); return; }
+            reader = rs[i++].body.getReader();
+          }
+          return reader.read().then(function (r) {
+            if (r.done) { reader = null; return step(); }
+            ctrl.enqueue(r.value);
+          });
+        }
+        return step();
+      }
+    });
+    return new Response(body, { headers: { "content-type": contentTypeOf(base), "content-length": String(total) } });
+  });
+}
 
 function checkedCopy(req) {
   return caches.open(AI_OK).then(function (ok) {
     return ok.match(req.url, { ignoreSearch: true });
   }).then(function (mark) {
     if (!mark) return null;
-    return caches.open(AI_CACHE).then(function (c) { return c.match(req.url, { ignoreSearch: true }); });
+    return mark.text().then(function (t) {
+      var p = t.split("|");
+      if (p[1] === "parts") return joinedParts(p.slice(3).join("|") || req.url, parseInt(p[2], 10));
+      return caches.open(AI_CACHE).then(function (c) { return c.match(req.url, { ignoreSearch: true }); });
+    });
   });
 }
 
@@ -55,7 +99,7 @@ self.addEventListener("activate", function (event) {
     caches.keys().then(function (keys) {
       return Promise.all(
         keys.map(function (key) {
-          return (key === VERSION || key === AI_CACHE || key === AI_OK || key.indexOf("webllm") === 0)
+          return (key === VERSION || key === AI_CACHE || key === AI_OK || key === AI_PARTS || key.indexOf("webllm") === 0)
             ? null : caches.delete(key);
         })
       );

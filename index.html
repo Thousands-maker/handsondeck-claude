@@ -3378,82 +3378,210 @@ function openAIScreen(tier){
 /* Stream every file into storage while hashing it; mark it checked only if the fingerprint
    matches. Checked files are skipped next time, so a paused download picks up where it
    stopped, and a file that fails is deleted. */
+/* Large files come down in pieces. Each piece is stored the moment it arrives, so a dropped
+   connection repeats one piece, not a 2 GB file, and "Continue download" picks up exactly
+   where it stopped, even on another day. Pieces are fingerprinted together at the end
+   against the published SHA-256; the service worker then serves them joined back up, so
+   the model never needs twice the space. A piece that receives nothing for 30 seconds is
+   abandoned and fetched again, so a stalled connection can't hang the download. */
+var AI_PARTS = "handsondeck-ai-parts";
+var CHUNK = (window.__hodChunkMB || 32) * 1048576, PARALLEL = 3, STALL_MS = window.__hodStallMs || 30000, PART_TRIES = 6;
+function partUrl(url, k){ return url + (url.indexOf("?") === -1 ? "?" : "&") + "hodpart=" + k; }
+function partLen(f, k){ return Math.min(f.size, (k + 1) * CHUNK) - k * CHUNK; }
+function chunked(f){ return f.size > CHUNK * 1.5; }
+
+/* One request, with a stall watchdog. Resolves to { status, blob, bytes }. */
+function fetchBody(url, headers, signal, onBytes){
+  var ctl = new AbortController(), timer = null, stalled = false;
+  function arm(){ clearTimeout(timer); timer = setTimeout(function(){ stalled = true; ctl.abort(); }, STALL_MS); }
+  function onOuter(){ ctl.abort(); }
+  if (signal){ if (signal.aborted) ctl.abort(); else signal.addEventListener("abort", onOuter); }
+  arm();
+  return fetch(url, { cache: "no-store", signal: ctl.signal, mode: "cors", credentials: "omit", headers: headers || {} })
+    .then(function(res){
+      if (!res.ok){ var he = new Error("http " + res.status); he.http = res.status; throw he; }
+      var reader = res.body.getReader(), parts = [], pend = [], pb = 0, got = 0;
+      function pump(){
+        return reader.read().then(function(r){
+          arm();
+          if (r.done) return;
+          got += r.value.length; pend.push(r.value); pb += r.value.length;
+          /* Fold chunks into Blobs as we go, so the browser can keep large files on disk. */
+          if (pb > 16 * 1048576){ parts.push(new Blob(pend)); pend = []; pb = 0; }
+          if (onBytes) onBytes(r.value);
+          return pump();
+        });
+      }
+      return pump().then(function(){
+        if (pend.length) parts.push(new Blob(pend));
+        return { status: res.status, blob: new Blob(parts), bytes: got };
+      });
+    })
+    .catch(function(err){
+      if (signal && signal.aborted){ var ae = new Error("Cancelled"); ae.name = "AbortError"; throw ae; }
+      if (stalled){ var se = new Error("stalled"); se.stalled = true; throw se; }
+      throw err;
+    })
+    .then(function(r){ clearTimeout(timer); if (signal) signal.removeEventListener("abort", onOuter); return r; },
+          function(e){ clearTimeout(timer); if (signal) signal.removeEventListener("abort", onOuter); throw e; });
+}
+
+/* Is this file already stored and checked? */
+function fileStored(f, url, ok, cache, parts){
+  return ok.match(url).then(function(mark){
+    if (!mark) return false;
+    return mark.text().then(function(t){
+      var p = t.split("|");
+      if (p[0] !== f.sha256) return false;
+      if (p[1] !== "parts") return cache.match(url).then(function(h){ return !!h; });
+      var n = parseInt(p[2], 10), checks = [];
+      for (var k = 0; k < n; k++) checks.push(parts.match(partUrl(url, k)));
+      return Promise.all(checks).then(function(rs){ return rs.every(Boolean); });
+    });
+  });
+}
+
 function aiDownload(m, signal){
-  var total = m.totalBytes, done = 0;
+  var total = m.totalBytes, done = 0, share = (m.tier === "pro" ? 0.9 : 0.85);
+  function progress(extra, text){
+    aiSetProgress((done + extra) / total * share,
+      text || "Downloading and checking \u2014 " + fmtMB(done + extra) + " of " + fmtMB(total));
+  }
   return ensureServiceWorkerControl().then(function(){
-    return Promise.all([caches.open(AI_CACHE), caches.open(AI_OK)]);
+    return Promise.all([caches.open(AI_CACHE), caches.open(AI_OK), caches.open(AI_PARTS)]);
   }).then(function(cs){
-    var cache = cs[0], ok = cs[1], i = 0;
+    var cache = cs[0], ok = cs[1], pc = cs[2], i = 0;
     function next(){
       if (i >= m.files.length) return Promise.resolve(cache);
       var f = m.files[i++], url = fileUrl(f);
-      return Promise.all([ok.match(url), cache.match(url)]).then(function(hits){
-        if (hits[0] && hits[1]){
-          return hits[0].text().then(function(t){
-            if (t === f.sha256){ done += f.size; return; }
-            return fetchOne();
-          });
-        }
-        return fetchOne();
+      return fileStored(f, url, ok, cache, pc).then(function(stored){
+        if (stored){ done += f.size; return; }
+        return ok.delete(url).then(function(){ return chunked(f) ? fetchChunked(f, url) : fetchWhole(f, url); });
       }).then(next);
+    }
 
-      /* One file: stream it, fingerprint it as it arrives, and only store it once it matches.
-         Mobile connections drop out, so a failed file is retried a few times (picking up
-         from scratch for that file only); files already checked are never fetched again. */
-      function fetchOne(){
-        var attempt = 0, MAX = 4;
-        function tryOnce(){
-          attempt++;
-          var got = 0;
-          return ok.delete(url).then(function(){
-            return fetch(url, { cache: "no-store", signal: signal, mode: "cors", credentials: "omit" });
-          }).then(function(res){
-            if (!res.ok){ var he = new Error("http " + res.status); he.http = res.status; throw he; }
-            var reader = res.body.getReader(), hasher = new Sha256(), parts = [], pending = [], pendingBytes = 0;
-            function pump(){
-              return reader.read().then(function(r){
-                if (r.done) return;
-                hasher.update(r.value); got += r.value.length;
-                pending.push(r.value); pendingBytes += r.value.length;
-                /* Fold chunks into Blobs as we go, so the browser can keep large files on disk. */
-                if (pendingBytes > 16 * 1048576){ parts.push(new Blob(pending)); pending = []; pendingBytes = 0; }
-                aiSetProgress((done + got) / total * (m.tier === "pro" ? 0.9 : 0.85),
-                  "Downloading and checking \u2014 " + fmtMB(done + got) + " of " + fmtMB(total));
-                return pump();
-              });
+    function friendly(err){
+      if (err && err.name === "AbortError") return err;
+      if (err && err.name === "QuotaExceededError"){
+        return new Error("This device ran out of storage space during the download. Free some space, then tap Continue download.");
+      }
+      if (err && err.mismatch){
+        return new Error("A downloaded file didn't match its fingerprint, so it was thrown away and nothing was installed. Try again later.");
+      }
+      var e2 = new Error("The connection kept dropping. Everything downloaded so far is kept \u2014 " +
+        "tap Continue download (ideally on Wi-Fi) to pick up exactly where it stopped.");
+      e2.partial = true;
+      return e2;
+    }
+    function retryable(err, attempt, max){
+      if (!err || err.name === "AbortError" || err.name === "QuotaExceededError") return false;
+      if (err.http === 404 || err.http === 403) return false;
+      if (err.mismatch && attempt >= 2) return false;
+      return attempt < max;
+    }
+    function wait(attempt){ return new Promise(function(r){ setTimeout(r, Math.min(15000, 1500 * attempt)); }); }
+
+    /* Small files: one request, fingerprinted as it arrives. */
+    function fetchWhole(f, url){
+      var attempt = 0;
+      function tryOnce(){
+        attempt++;
+        var hasher = new Sha256(), got = 0;
+        return fetchBody(url, null, signal, function(v){ hasher.update(v); got += v.length; progress(got); })
+          .then(function(r){
+            if (hasher.hex() !== f.sha256){ var me = new Error("mismatch"); me.mismatch = true; throw me; }
+            return cache.put(url, new Response(r.blob, { headers: { "content-type": contentTypeFor(f.path || f.url) } }))
+              .then(function(){ done += f.size; return ok.put(url, new Response(f.sha256)); });
+          })
+          .catch(function(err){
+            if (retryable(err, attempt, 4)){
+              progress(0, (err.stalled ? "Connection stalled" : "Connection dropped") + " \u2014 retrying\u2026");
+              return wait(attempt).then(tryOnce);
             }
-            return pump().then(function(){
-              if (pending.length) parts.push(new Blob(pending));
-              var h = hasher.hex();
-              if (h !== f.sha256){ var me = new Error("mismatch"); me.mismatch = true; throw me; }
-              return cache.put(url, new Response(new Blob(parts), { headers: {
-                "content-type": contentTypeFor(f.path || f.url) } })).then(function(){
-                done += f.size;
-                return ok.put(url, new Response(h));
-              });
+            throw friendly(err);
+          });
+      }
+      return tryOnce();
+    }
+
+    /* Large files: pieces, three at a time, each stored as soon as it's complete. */
+    function fetchChunked(f, url, redo){
+      var n = Math.ceil(f.size / CHUNK), stored = 0, inflight = {}, failed = null, queue = [];
+      function shown(){ var s = stored; for (var k in inflight) s += inflight[k]; return s; }
+      var have = [];
+      for (var k = 0; k < n; k++) have.push(pc.match(partUrl(url, k)));
+      return Promise.all(have).then(function(rs){
+        rs.forEach(function(r, k){
+          if (r && parseInt(r.headers.get("x-bytes"), 10) === partLen(f, k)) stored += partLen(f, k);
+          else queue.push(k);
+        });
+        progress(stored);
+        function getPart(k){
+          var attempt = 0, start = k * CHUNK, len = partLen(f, k);
+          function tryOnce(){
+            attempt++; inflight[k] = 0;
+            return fetchBody(url, { Range: "bytes=" + start + "-" + (start + len - 1) }, signal, function(v){
+              inflight[k] += v.length; progress(shown());
+            }).then(function(r){
+              if (r.status !== 206){ var nr = new Error("no ranges"); nr.noRange = true; throw nr; }
+              if (r.bytes !== len){ var sh = new Error("short piece"); throw sh; }
+              return pc.put(partUrl(url, k), new Response(r.blob, { headers: { "x-bytes": String(len) } }));
+            }).then(function(){
+              delete inflight[k]; stored += len; progress(shown());
+            }).catch(function(err){
+              delete inflight[k];
+              if (!err.noRange && retryable(err, attempt, PART_TRIES)){
+                progress(shown(), (err.stalled ? "Connection stalled" : "Connection dropped") +
+                  " \u2014 retrying one piece (" + fmtMB(stored) + " kept)\u2026");
+                return wait(attempt).then(tryOnce);
+              }
+              throw err;
             });
-          }).catch(function(err){
-            if (err && err.name === "AbortError") throw err;
-            if (err && err.name === "QuotaExceededError"){
-              throw new Error("This device ran out of storage space during the download. Free some space, then tap Download to continue.");
-            }
-            var retryable = !(err && err.http === 404) && attempt < MAX && !(err && err.mismatch && attempt >= 2);
-            if (retryable){
-              aiSetProgress(done / total * (m.tier === "pro" ? 0.9 : 0.85),
-                "Connection dropped \u2014 retrying (" + (attempt + 1) + " of " + MAX + ")\u2026");
-              return new Promise(function(r){ setTimeout(r, 1500 * attempt); }).then(tryOnce);
-            }
-            if (err && err.mismatch){
-              throw new Error("A downloaded file didn't match its fingerprint, so it was thrown away and nothing was installed. Try again later.");
-            }
-            var e2 = new Error("The connection dropped while downloading. Everything already checked is kept \u2014 " +
-              "tap Continue download (ideally on Wi-Fi) to pick up where it stopped.");
-            e2.partial = true;
-            throw e2;
+          }
+          return tryOnce();
+        }
+        function worker(){
+          if (failed || !queue.length) return Promise.resolve();
+          var k = queue.shift();
+          return getPart(k).then(worker, function(err){ failed = failed || err; });
+        }
+        var ws = [];
+        for (var w = 0; w < PARALLEL; w++) ws.push(worker());
+        return Promise.all(ws);
+      }).then(function(){
+        if (failed){
+          /* A host that ignores ranges: fall back to fetching the file in one go. */
+          if (failed.noRange) return fetchWhole(f, url).then(function(){ return "whole"; });
+          throw friendly(failed);
+        }
+        /* Fingerprint the pieces in order. */
+        var hasher = new Sha256(), k = 0, checked = 0;
+        function hashNext(){
+          if (k >= n) return Promise.resolve();
+          var key = partUrl(url, k++);
+          return pc.match(key).then(function(r){
+            if (!r){ var lost = new Error("piece missing"); throw lost; }
+            return r.arrayBuffer();
+          }).then(function(buf){
+            hasher.update(new Uint8Array(buf)); checked += buf.byteLength;
+            progress(checked, "Checking the download \u2014 " + fmtMB(done + checked) + " of " + fmtMB(total));
+            return hashNext();
           });
         }
-        return tryOnce();
-      }
+        return hashNext().then(function(){
+          if (hasher.hex() === f.sha256){
+            done += f.size;
+            return ok.put(url, new Response(f.sha256 + "|parts|" + n + "|" + url));
+          }
+          /* Bad pieces: throw them all away and fetch the file once more. */
+          var dels = [];
+          for (var d = 0; d < n; d++) dels.push(pc.delete(partUrl(url, d)));
+          return Promise.all(dels).then(function(){
+            if (redo){ var me = new Error("mismatch"); me.mismatch = true; throw friendly(me); }
+            return fetchChunked(f, url, true);
+          });
+        });
+      });
     }
     return next();
   });
@@ -3574,6 +3702,18 @@ function clearTier(tier){
         var oldOwn = prevLs && !mine[u] && (tier === "pro" ? /\/resolve\//.test(u) : /\/models\//.test(u) && !/pro-manifest/.test(u));
         if (mine[u] || oldOwn) return Promise.all([cs[0].delete(req), cs[1].delete(req)]);
         return null;
+      }));
+    });
+  }));
+  drops.push(caches.open(AI_PARTS).then(function(pc){
+    return pc.keys().then(function(keys){
+      var mine = {};
+      if (m) m.files.forEach(function(f){ mine[fileUrl(f)] = 1; });
+      return Promise.all(keys.map(function(req){
+        var base = req.url.replace(/[?&]hodpart=\d+$/, "");
+        if (keepUrls[base]) return null;
+        var oldOwn = prevLs && !mine[base] && (tier === "pro" ? /\/resolve\//.test(base) : /\/models\//.test(base));
+        return (mine[base] || oldOwn) ? pc.delete(req) : null;
       }));
     });
   }));
